@@ -92,16 +92,12 @@ runs:
           sudo mount -t tmpfs tmpfs /home/github/.ya/
           sudo chown -R github:github /home/github/.ya/
         fi
-        
+
         if dpkg -s "zram-tools" >/dev/null 2>&1; then
           echo "zram-tools is already installed"
         else
           sudo apt-get install zram-tools
-          echo <<EOF | sudo tee -a /etc/default/zramswap
-ALGO=lz4
-PERCENT=75
-PRIORITY=100
-EOF
+          echo -ne "ALGO=lz4\nPERCENT=75\nPRIORITY=100" | sudo tee -a /etc/default/zramswap
           sudo systemctl restart zramswap
           zramctl
         fi
