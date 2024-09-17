@@ -63,6 +63,7 @@ runs:
         if dpkg -s "zram-tools" >/dev/null 2>&1; then
           echo "zram-tools is already installed"
         else
+          sudo apt-get update
           sudo apt-get install zram-tools
           echo -ne "ALGO=lz4\nPERCENT=75\nPRIORITY=100" | sudo tee -a /etc/default/zramswap
           sudo systemctl restart zramswap
