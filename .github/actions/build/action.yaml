@@ -51,6 +51,28 @@ runs:
           rm -rf /home/github/.ya/
         fi
 
+        if [ "$(findmnt -n -o FSTYPE --target "/home/github/.ya/")" = "tmpfs" ];
+        then
+          echo "tmpfs is already mounted"
+        else
+          mkdir -p /home/github/.ya/
+          sudo mount -t tmpfs tmpfs /home/github/.ya/
+          sudo chown -R github:github /home/github/.ya/
+        fi
+
+        if dpkg -s "zram-tools" >/dev/null 2>&1; then
+          echo "zram-tools is already installed"
+        else
+          sudo apt-get install zram-tools
+          echo <<EOF | sudo tee -a /etc/default/zramswap
+ALGO=lz4
+PERCENT=75
+PRIORITY=100
+EOF
+          sudo systemctl restart zramswap
+          zramctl
+        fi
+
     - name: build
       shell: bash --noprofile --norc -eo pipefail -x {0}
       run: |
