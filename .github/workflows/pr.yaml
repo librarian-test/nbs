@@ -5,6 +5,7 @@ on:
       - 'main'
     paths-ignore:
       - 'ydb/docs/**'
+      - '.github/**'
       - 'example/**'
       - 'doc/**'
       - '**.md'
@@ -140,77 +141,10 @@ jobs:
                 }
               }
             }
-  path-filter-regular:
-    needs:
-      - check-running-allowed
-    if: needs.check-running-allowed.outputs.result == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      result: ${{ steps.check-path-filter.outputs.result }}
-    steps:
-      - name: Check if path filter is required
-        id: check-path-filter
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const prNumber = context.payload.pull_request.number;
-            const prFiles = await github.rest.pulls.listFiles({
-              owner,
-              repo,
-              pull_number: prNumber
-            });
-
-            const pathFilter = prFiles.data.some(file => {
-              const path = file.filename;
-              return !path.startsWith('.github/') && !path.startsWith('example/') && !path.startsWith('doc/') && !path.endsWith('.md');
-            });
-
-            if (pathFilter) {
-              console.log('Path filter is required');
-              return true
-            } 
-            console.log('Path filter is not required');
-            return false
-  path-filter-github:
-    needs:
-      - check-running-allowed
-    if: needs.check-running-allowed.outputs.result == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      result: ${{ steps.check-path-filter-github.outputs.result }}
-    steps:
-      - name: Check if path filter is required (GitHub Actions)
-        id: check-path-filter-github
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const prNumber = context.payload.pull_request.number;
-            const prFiles = await github.rest.pulls.listFiles({
-              owner,
-              repo,
-              pull_number: prNumber
-            });
-
-            const pathFilter = prFiles.data.some(file => {
-              const path = file.filename;
-              return path.startsWith('.github/');
-            });
-
-            if (pathFilter) {
-              console.log('Path filter is required');
-              return true
-            } 
-            console.log('Path filter is not required');
-            return false
   create-build-and-test-target-var:
     needs:
       - check-running-allowed
-      - path-filter-regular
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-regular.outputs.result == 'true'
+    if: needs.check-running-allowed.outputs.result == 'true'
     outputs:
       build_target: ${{ steps.set-build-and-test-targets.outputs.build_target }}
       build_target_asan: ${{ steps.set-build-and-test-targets.outputs.build_target_asan }}
@@ -340,9 +274,8 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-      - path-filter-regular
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-regular.outputs.result == 'true'
-    name: Build and test (regular)
+    if: needs.check-running-allowed.outputs.result == 'true'
+    name: Build and test
     uses: ./.github/workflows/build_and_test_on_demand.yaml
     with:
       build_target: ${{ needs.create-build-and-test-target-var.outputs.build_target }}
@@ -359,8 +292,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-      - path-filter-regular
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-regular.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'asan')
+    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'asan')
     name: Build and test (asan)
     uses: ./.github/workflows/build_and_test_on_demand.yaml
     with:
@@ -379,8 +311,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-      - path-filter-regular
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-regular.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'tsan')
+    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'tsan')
     name: Build and test (tsan)
     uses: ./.github/workflows/build_and_test_on_demand.yaml
     with:
@@ -399,8 +330,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-      - path-filter-regular
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-regular.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'msan')
+    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'msan')
     name: Build and test (msan)
     uses: ./.github/workflows/build_and_test_on_demand.yaml
     with:
@@ -419,8 +349,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-      - path-filter-regular
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-regular.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'ubsan')
+    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'ubsan')
     name: Build and test (ubsan)
     uses: ./.github/workflows/build_and_test_on_demand.yaml
     with:
@@ -435,161 +364,15 @@ jobs:
       cache_update_tests: false
       sleep_after_tests: ${{ contains(github.event.pull_request.labels.*.name, 'sleep') && '7200' || '1' }}
     secrets: inherit
-# section with .github checks
-  shell:
-    needs:
-      - check-running-allowed
-      - path-filter-github
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: get reporter name
-        uses: haya14busa/action-cond@v1
-        id: reporter
-        with:
-          cond: ${{ github.event_name == 'pull_request' }}
-          if_true: "github-pr-review"
-          if_false: "github-check"
-
-      - name: set up dependencies
-        run: pip install pyyaml
-
-      - name: generate shellscripts from github actions
-        run: |
-          python .github/scripts/shell-extractor.py
-          find .temporary/ -type f -name "*.sh";
-
-      - name: shellcheck for .github dir
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: .github
-        env:
-          SHELLCHECK_OPTS: "-e SC2155,SC2086,SC2154,SC2164,SC2009,SC2015"
-
-
-      - name: shellcheck for github actions shell scripts in .temporary dir
-        uses: ludeeus/action-shellcheck@master
-        env:
-          SHELLCHECK_OPTS: "-e SC2155,SC2086,SC2154,SC2164,SC2009,SC2015"
-        with:
-          scandir: .temporary
-
-      - name: shfmt
-        uses: librarian/action-shfmt@v0.0.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workdir: .github/
-          shfmt_flags: "-i 4 -ci -kp -bn -sr"
-
-  python:
-    needs:
-      - check-running-allowed
-      - path-filter-github
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: get reporter name
-        uses: haya14busa/action-cond@v1
-        id: reporter
-        with:
-          cond: ${{ github.event_name == 'pull_request' }}
-          if_true: "github-pr-review"
-          if_false: "github-check"
-
-
-      - name: set up python environment
-        uses: actions/setup-python@v5.0.0
-        with:
-          python-version: "3.10"
-
-      - name: set up dependencies
-        run: pip install flake8 black[jupyter] flake8-docstrings flake8-simplify flake8-unused-arguments flake8-quotes
-
-
-      - name: flake8
-        uses: reviewdog/action-flake8@v3.8.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workdir: .github/
-          reporter: ${{ steps.reporter.outputs.value }}
-          flake8_args: "--max-line-length 128 --ignore Q000,D100,D101,D102,D103,D104,D105,D106,D107"
-
-      - name: black
-        uses: reviewdog/action-black@v3.10.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workdir: .github/
-          reporter: ${{ steps.reporter.outputs.value }}
-
-  workflows:
-    needs:
-      - check-running-allowed
-      - path-filter-github
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: install action-validator with asdf
-        uses: asdf-vm/actions/install@v3
-        with:
-          tool_versions: |
-            action-validator 0.5.4
-
-      - name: check workflows syntax
-        id: lint
-        run: |
-          set -x
-          export TMP_OUT=$(mktemp)
-          find .github/workflows -type f \( -iname \*.yaml -o -iname \*.yml \) -print0 \
-            | xargs -0 -I {} action-validator --verbose {} > $TMP_OUT
-
-          echo "WORKFLOW_LINT=$(cat $TMP_OUT | awk -v ORS='\\n' 1)"
-          cat $TMP_OUT >> "$GITHUB_STEP_SUMMARY"
-          echo "WORKFLOW_LINT=$(cat $TMP_OUT | awk -v ORS='\\n' 1)" >> "$GITHUB_OUTPUT"
-
-      - name: comment on issue
-        uses: actions/github-script@v7.0.1
-        if:  ${{ github.event_name == 'pull_request' }}
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '${{ steps.lint.outputs.WORKFLOW_LINT }}'
-            })
-  nbs-github-actions:
-    needs:
-      - check-running-allowed
-      - path-filter-github
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
-    name: Launch scripts on test-data
-    uses: ./.github/workflows/github_actions_scripts.yaml
-    secrets: inherit
-
-  create-and-delete-vm:
-    needs:
-      - check-running-allowed
-      - path-filter-github
-    if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
-    name: Create and delete VM
-    uses: ./.github/workflows/create_and_delete_vm.yaml
-    with:
-      nebius: ${{ vars.GLOBAL_RUN_ON_NEBIUS == 'yes' || ((github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'nebius')) && 'yes' || 'no') }}
-      allow_downgrade: ${{ contains(github.event.pull_request.labels.*.name, 'allow-downgrade') && 'yes' || 'no' }}
-      large_tests: ${{ contains(github.event.pull_request.labels.*.name, 'large-tests') && 'yes' || 'no' }}
-    secrets: inherit
+  merge-gatekeeper:
+      needs: 
+          - build_and_test
+      runs-on: ubuntu-latest
+      permissions:
+        checks: read
+        statuses: read
+      steps:
+        - name: Run Merge Gatekeeper
+          uses: upsidr/merge-gatekeeper@v1
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
