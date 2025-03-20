@@ -14,9 +14,9 @@ jobs:
           with:
             github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
             script: |
-                var org = 'ydb-platform';
-                var nebiusTeamSlug = 'nbs_nebius';
-                var yandexTeamSlug = 'nbs_yandex';
+                var org = 'librarian-test';
+                var nebiusTeamSlug = 'nbs';
+                var yandexTeamSlug = 'nbs';
                 const leftUsersData = await github.paginate(
                     github.rest.teams.listMembersInOrg,
                     {
