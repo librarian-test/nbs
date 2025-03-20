@@ -168,8 +168,10 @@ jobs:
             });
 
             if (pathFilter) {
+              console.log('Path filter is required');
               return true
             } 
+            console.log('Path filter is not required');
             return false
   path-filter-github:
     needs:
@@ -199,8 +201,10 @@ jobs:
             });
 
             if (pathFilter) {
+              console.log('Path filter is required');
               return true
             } 
+            console.log('Path filter is not required');
             return false
   create-build-and-test-target-var:
     needs:
