@@ -1,5 +1,4 @@
-name: Build and test
-
+name: Build and test (ya)
 on:
   workflow_call:
     inputs:
