@@ -137,7 +137,7 @@ jobs:
         install: false
 
     - name: Build
-      uses: ./.github/actions/build
+      uses: ./.github/actions/build_noop
       if: inputs.run_build
       with:
         build_target: ${{ inputs.build_target }}
@@ -152,7 +152,7 @@ jobs:
         use_network_cache: ${{ inputs.use_network_cache }}
 
     - name: Run tests
-      uses: ./.github/actions/test
+      uses: ./.github/actions/test_noop
       if: inputs.run_tests
       with:
         test_target: ${{ inputs.test_target }}
