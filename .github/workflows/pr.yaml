@@ -442,7 +442,6 @@ jobs:
       - path-filter-github
     if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
     runs-on: ubuntu-latest
-
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -493,7 +492,6 @@ jobs:
       - path-filter-github
     if: needs.check-running-allowed.outputs.result == 'true' && needs.path-filter-github.outputs.result == 'true'
     runs-on: ubuntu-latest
-
     steps:
       - name: checkout
         uses: actions/checkout@v4

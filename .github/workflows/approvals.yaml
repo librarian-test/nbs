@@ -8,6 +8,7 @@ on:
 jobs:
     approval-check:
         runs-on: ubuntu-latest
+        name: Check for correct approvals
         steps:
         - name: Check approvals from left and right teams
           uses: actions/github-script@v7
