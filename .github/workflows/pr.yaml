@@ -368,6 +368,7 @@ jobs:
     needs: 
       - build_and_test
     runs-on: ubuntu-latest
+    if: always()
     permissions:
       checks: read
       statuses: read

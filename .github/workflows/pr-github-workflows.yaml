@@ -349,6 +349,7 @@ jobs:
       - python
       - shell
     runs-on: ubuntu-latest
+    if: always()
     permissions:
       checks: read
       statuses: read
