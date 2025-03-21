@@ -333,10 +333,18 @@ jobs:
   #     allow_downgrade: ${{ needs.set-env.outputs.allow_downgrade }}
   #     large_tests: ${{ needs.set-env.outputs.large_tests }}
   #   secrets: inherit
+  fail-job:
+    needs: [set-env, check-running-allowed]
+    if: needs.check-running-allowed.outputs.result == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: fail job
+        run: exit 1
   final-check:
     needs: 
       # - create-and-delete-vm
       # - nbs-github-actions
+      - fail-job
       - workflows
       - python
       - shell
