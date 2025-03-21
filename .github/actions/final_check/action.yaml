@@ -18,7 +18,7 @@ runs:
   steps:
     - name: Check failed jobs
       shell: bash
-      run: ${GITHUB_ACTION_PATH}/check.sh
+      run: bash ${GITHUB_ACTION_PATH}/check.sh
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
         GITHUB_RUN_ID: ${{ github.run_id }}
