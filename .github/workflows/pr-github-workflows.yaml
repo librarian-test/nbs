@@ -346,7 +346,7 @@ jobs:
       statuses: read
     steps:
       - name: Run final check
-        uses: ./.github/actions/final_check@main
+        uses: ./.github/actions/final_check
         with:
           token: ${{ github.token }}
           excluded: "Check for correct approvals"
