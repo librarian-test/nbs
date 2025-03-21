@@ -375,7 +375,8 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          ref: 'main'
+          sparse-checkout: '.github'
       - name: Run final check
         uses: ./.github/actions/final_check
         with:
