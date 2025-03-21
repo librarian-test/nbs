@@ -316,23 +316,23 @@ jobs:
               repo: context.repo.repo,
               body: '${{ steps.lint.outputs.WORKFLOW_LINT }}'
             })
-  # nbs-github-actions:
-  #   needs: [set-env, check-running-allowed]
-  #   if: needs.check-running-allowed.outputs.result == 'true'
-  #   name: Launch scripts on test-data
-  #   uses: ./.github/workflows/github_actions_scripts.yaml
-  #   secrets: inherit
+  nbs-github-actions:
+    needs: [set-env, check-running-allowed]
+    if: needs.check-running-allowed.outputs.result == 'true'
+    name: Launch scripts on test-data
+    uses: ./.github/workflows/github_actions_scripts.yaml
+    secrets: inherit
 
-  # create-and-delete-vm:
-  #   needs: [set-env, check-running-allowed]
-  #   if: needs.check-running-allowed.outputs.result == 'true'
-  #   name: Create and delete VM
-  #   uses: ./.github/workflows/create_and_delete_vm.yaml
-  #   with:
-  #     nebius: ${{ needs.set-env.outputs.nebius }}
-  #     allow_downgrade: ${{ needs.set-env.outputs.allow_downgrade }}
-  #     large_tests: ${{ needs.set-env.outputs.large_tests }}
-  #   secrets: inherit
+  create-and-delete-vm:
+    needs: [set-env, check-running-allowed]
+    if: needs.check-running-allowed.outputs.result == 'true'
+    name: Create and delete VM
+    uses: ./.github/workflows/create_and_delete_vm.yaml
+    with:
+      nebius: ${{ needs.set-env.outputs.nebius }}
+      allow_downgrade: ${{ needs.set-env.outputs.allow_downgrade }}
+      large_tests: ${{ needs.set-env.outputs.large_tests }}
+    secrets: inherit
   fail-job:
     needs: [set-env, check-running-allowed]
     if: needs.check-running-allowed.outputs.result == 'true'
@@ -341,10 +341,10 @@ jobs:
       - name: fail job
         run: exit 1
   final-check:
+    name: Check run status
     needs: 
-      # - create-and-delete-vm
-      # - nbs-github-actions
-      - fail-job
+      - create-and-delete-vm
+      - nbs-github-actions
       - workflows
       - python
       - shell
@@ -357,12 +357,11 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          ref: 'main'
           sparse-checkout: '.github'
       - name: Run final check
         uses: ./.github/actions/final_check
         with:
           token: ${{ github.token }}
           excluded: "Check for correct approvals"
-          self: "final-check"
+          self: "Check run status"
 

@@ -6,6 +6,10 @@ echo "🔍 Checking failed jobs in workflow run: $GITHUB_RUN_ID"
 IFS=',' read -ra EXCLUDED <<<"$EXCLUDED_JOBS"
 EXCLUDED+=("$SELF_JOB_NAME")
 
+for ex in "${EXCLUDED[@]}"; do
+    echo "🚫 Excluded job: $ex"
+done
+
 # Get job list from GitHub API
 response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
     -H "Accept: application/vnd.github+json" \
