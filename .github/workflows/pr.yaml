@@ -372,6 +372,10 @@ jobs:
       checks: read
       statuses: read
     steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Run final check
         uses: ./.github/actions/final_check
         with:
