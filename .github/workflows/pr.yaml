@@ -364,16 +364,17 @@ jobs:
       cache_update_tests: false
       sleep_after_tests: ${{ contains(github.event.pull_request.labels.*.name, 'sleep') && '7200' || '1' }}
     secrets: inherit
-  merge-gatekeeper:
-      needs: 
-          - build_and_test
-      runs-on: ubuntu-latest
-      permissions:
-        checks: read
-        statuses: read
-      steps:
-        - name: Run Merge Gatekeeper
-          uses: upsidr/merge-gatekeeper@v1
-          with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            ignored: Check for correct approvals
+  final-check:
+    needs: 
+      - build_and_test
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      statuses: read
+    steps:
+      - name: Run final check
+        uses: ./.github/actions/final_check@main
+        with:
+          token: ${{ github.token }}
+          excluded: "Check for correct approvals"
+          self: "final-check"

@@ -333,21 +333,22 @@ jobs:
       allow_downgrade: ${{ needs.set-env.outputs.allow_downgrade }}
       large_tests: ${{ needs.set-env.outputs.large_tests }}
     secrets: inherit
-  merge-gatekeeper:
+  final-check:
     needs: 
-        - create-and-delete-vm
-        - nbs-github-actions
-        - workflows
-        - python
-        - shell
+      - create-and-delete-vm
+      - nbs-github-actions
+      - workflows
+      - python
+      - shell
     runs-on: ubuntu-latest
     permissions:
       checks: read
       statuses: read
     steps:
-      - name: Run Merge Gatekeeper
-        uses: upsidr/merge-gatekeeper@v1
+      - name: Run final check
+        uses: ./.github/actions/final_check@main
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ignored: Check for correct approvals
+          token: ${{ github.token }}
+          excluded: "Check for correct approvals"
+          self: "final-check"
 
