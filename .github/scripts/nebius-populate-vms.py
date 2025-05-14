@@ -188,12 +188,16 @@ async def main():
         )
         logger.info("Most VMs are busy, provisioning %d extra VM(s)", to_create)
 
-    if projected_vm_count == 0:
+    if (
+        projected_vm_count == 0
+        or idle_remaining + len(busy_vm_ids) < args.max_vms_to_create
+    ):
         logger.info(
-            "No VMs will be running, creating %d VM(s) to reach the minimum required",
+            "Not enough total VMs available (idle + busy = %d), creating %d VM(s) to reach the minimum required",
+            idle_remaining + len(busy_vm_ids),
             args.max_vms_to_create,
         )
-        to_create = args.max_vms_to_create
+        to_create = args.max_vms_to_create - (idle_remaining + len(busy_vm_ids))
 
     logger.info("PROJECTED_VM_COUNT=%d", projected_vm_count)
     logger.info("FINAL_TO_CREATE=%d", to_create)
