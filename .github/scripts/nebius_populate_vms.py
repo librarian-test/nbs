@@ -71,14 +71,14 @@ def filter_instances(instances, runners, args, now_ts):
 
 
 def decide_scaling(
-    matched_vm_ids,
-    idle_vm_ids,
-    busy_vm_ids,
-    vms_to_remove,
-    max_vms_to_create,
-    maximum_amount_of_vms_to_have,
-    extra_vms_if_needed,
-):
+    matched_vm_ids: list[str],
+    idle_vm_ids: list[str],
+    busy_vm_ids: list[str],
+    vms_to_remove: list[str],
+    max_vms_to_create: int,
+    maximum_amount_of_vms_to_have: int,
+    extra_vms_if_needed: int,
+) -> tuple[int, int, int]:
     # Downscale if too many idle VMs
     excess_idle = len(idle_vm_ids) - max_vms_to_create
     logger.info("Excess idle: %d", excess_idle)
