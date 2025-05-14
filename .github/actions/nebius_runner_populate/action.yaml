@@ -59,7 +59,7 @@ runs:
         if [ -n "$MAXIMUM_AMOUNT_OF_VMS_TO_HAVE" ]; then
           MAXIMUM_AMOUNT_OF_VMS_TO_HAVE=$((MAX_VMS_TO_CREATE*2))
         fi
-        python3 -m scripts.nebius-populate-vms \
+        python3 -m scripts.nebius_populate_vms \
           --service-account-key "${SERVICE_ACCOUNT_KEY}" \
           --github-repo-owner "${OWNER}" \
           --github-repo "${REPO}" \
