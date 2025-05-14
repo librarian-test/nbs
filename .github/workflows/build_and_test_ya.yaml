@@ -177,8 +177,8 @@ jobs:
       shell: bash --noprofile --norc -eo pipefail -x {0}
       run: |
         [ -f /etc/default/zramswap ] && echo "zramswap already installed" && exit 0
-        sudo apt-get -o DPkg::Lock::Timeout=60 update
-        sudo apt-get -o DPkg::Lock::Timeout=60 install -y zram-tools
+        sudo apt-get -o Dpkg::Lock::Timeout=600 update
+        sudo apt-get -o Dpkg::Lock::Timeout=600 install -y zram-tools
         echo "vm.swappiness=1" | sudo tee -a /etc/sysctl.conf
         sudo sysctl -p
         echo "SIZE=102400" | sudo tee -a /etc/default/zramswap
