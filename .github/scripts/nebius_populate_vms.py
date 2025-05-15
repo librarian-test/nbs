@@ -160,84 +160,20 @@ def decide_scaling(
     return to_create, excess_idle, projected
 
 
-async def main():
-    parser = argparse.ArgumentParser(description="Manage GitHub runners on Nebius.")
-    parser.add_argument(
-        "--api-endpoint", default="api.ai.nebius.cloud", help="Cloud API endpoint"
-    )
-    parser.add_argument(
-        "--service-account-key",
-        required=True,
-        help="Path to the service account credentials file (JSON)",
-    )
-    parser.add_argument(
-        "--github-repo-owner",
-        required=True,
-        default="ydb-platform",
-        help="GitHub repository owner name",
-    )
-    parser.add_argument(
-        "--github-repo", required=True, default="nbs", help="GitHub repository name"
-    )
-    parser.add_argument(
-        "--parent-id",
-        required=True,
-        help="Parent folder or project ID for VM placement",
-    )
-    parser.add_argument(
-        "--flavor",
-        required=True,
-        choices=["light", "heavy"],
-        help="VM flavor label to match against",
-    )
-    parser.add_argument(
-        "--vms-older-than",
-        type=int,
-        required=True,
-        help="Minimum VM age (in seconds) before it can be deleted if idle",
-    )
-    parser.add_argument(
-        "--max-vms-to-create",
-        type=int,
-        required=True,
-        help="Maximum number of VMs to create if idle VMs are less than this",
-    )
-    parser.add_argument(
-        "--maximum-amount-of-vms-to-have",
-        type=int,
-        required=True,
-        help="Hard cap on total number of VMs allowed",
-    )
-    parser.add_argument(
-        "--extra-vms-if-needed",
-        type=int,
-        default=1,
-        help="Number of additional VMs to create when most are busy",
-    )
-    args = parser.parse_args()
-    logger.info("Parsed arguments: %s", args)
-
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if not github_token:
-        raise RuntimeError("GITHUB_TOKEN environment variable is not set")
-
+async def run(github: Github, sdk: SDK, args: argparse.Namespace):
     now_ts = int(time.time())
-    sdk = SDK(credentials_file_name=args.service_account_key)
-    github = Github(github_token)
     repo = github.get_repo(f"{args.github_repo_owner}/{args.github_repo}")
     instance_client = InstanceServiceClient(sdk)
-
     instances = []
     try:
         logger.info("Listing instances from Nebius (with pagination)...")
-        async with sdk:
-            request = ListInstancesRequest(parent_id=args.parent_id)
-            while True:
-                response = await instance_client.list(request)
-                instances.extend(response.items)
-                if not response.next_page_token:
-                    break
-                request.page_token = response.next_page_token
+        request = ListInstancesRequest(parent_id=args.parent_id)
+        while True:
+            response = await instance_client.list(request)
+            instances.extend(response.items)
+            if not response.next_page_token:
+                break
+            request.page_token = response.next_page_token
     except RequestError as err:
         logger.error("Failed to fetch instances from Nebius: %s", err)
         github_output("RUNNING_VMS_COUNT", "0")
@@ -310,7 +246,6 @@ async def main():
             continue
 
         try:
-            instance_client = InstanceServiceClient(sdk)
             request = GetInstanceRequest(id=runner.name)
             instance = await instance_client.get(request)
             if instance.status.state.name == "RUNNING":
@@ -330,6 +265,74 @@ async def main():
                     )
                     return
                 logger.info("Removed runner %s (id: %s)", runner.name, runner.id)
+
+
+async def main():
+    parser = argparse.ArgumentParser(description="Manage GitHub runners on Nebius.")
+    parser.add_argument(
+        "--api-endpoint", default="api.ai.nebius.cloud", help="Cloud API endpoint"
+    )
+    parser.add_argument(
+        "--service-account-key",
+        required=True,
+        help="Path to the service account credentials file (JSON)",
+    )
+    parser.add_argument(
+        "--github-repo-owner",
+        required=True,
+        default="ydb-platform",
+        help="GitHub repository owner name",
+    )
+    parser.add_argument(
+        "--github-repo", required=True, default="nbs", help="GitHub repository name"
+    )
+    parser.add_argument(
+        "--parent-id",
+        required=True,
+        help="Parent folder or project ID for VM placement",
+    )
+    parser.add_argument(
+        "--flavor",
+        required=True,
+        choices=["light", "heavy"],
+        help="VM flavor label to match against",
+    )
+    parser.add_argument(
+        "--vms-older-than",
+        type=int,
+        required=True,
+        help="Minimum VM age (in seconds) before it can be deleted if idle",
+    )
+    parser.add_argument(
+        "--max-vms-to-create",
+        type=int,
+        required=True,
+        help="Maximum number of VMs to create if idle VMs are less than this",
+    )
+    parser.add_argument(
+        "--maximum-amount-of-vms-to-have",
+        type=int,
+        required=True,
+        help="Hard cap on total number of VMs allowed",
+    )
+    parser.add_argument(
+        "--extra-vms-if-needed",
+        type=int,
+        default=1,
+        help="Number of additional VMs to create when most are busy",
+    )
+    args = parser.parse_args()
+    logger.info("Parsed arguments: %s", args)
+
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if not github_token:
+        raise RuntimeError("GITHUB_TOKEN environment variable is not set")
+
+    sdk = SDK(credentials_file_name=args.service_account_key)
+    github = Github(github_token)
+
+    async with sdk:
+        await run(github, sdk, args)
 
 
 if __name__ == "__main__":
