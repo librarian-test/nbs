@@ -279,7 +279,7 @@ jobs:
           export TMP_OUT=$(mktemp)
           export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/.github
           cd .github/ || true
-          pytest --tb=short --disable-warnings --maxfail=1 --junitxml=pytest-test-results.xml
+          pytest --tb=short --disable-warnings --maxfail=1 --junitxml=${GITHUB_WORKSPACE}/pytest-test-results.xml
       - name: Upload pytest test results
         if: ${{ always() }}
         id: upload
@@ -287,7 +287,7 @@ jobs:
         with:
           name: pytest-results
           path: pytest-test-results.xml
-      - name: comment on issue (success)
+      - name: comment on issue (${{ steps.pytest.outcome }})
         if: ${{ github.event_name == 'pull_request' && always() }}
         uses: actions/github-script@v7.0.1
         with:
