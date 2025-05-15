@@ -251,7 +251,9 @@ jobs:
           python-version: "3.10"
 
       - name: set up dependencies
-        run: pip install flake8 black[jupyter] flake8-docstrings flake8-simplify flake8-unused-arguments flake8-quotes
+        run: |
+          pip install -r .github/scripts/requirements.txt
+          pip install -r .github/scripts/requirements_dev.txt
 
 
       - name: flake8
@@ -270,6 +272,33 @@ jobs:
           reporter: ${{ steps.reporter.outputs.value }}
       
       - name: pytest
+        id: pytest
+        shell: bash
+        run: |
+          set -x
+          export TMP_OUT=$(mktemp)
+          export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/.github
+          cd .github/ || true
+          pytest --tb=short --disable-warnings --maxfail=1 --junitxml=pytest-test-results.xml
+      - name: Upload pytest test results
+        if: ${{ always() }}
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: pytest-test-results.xml
+      - name: comment on issue (success)
+        if: ${{ github.event_name == 'pull_request' && always() }}
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'status: ${{ steps.pytest.outcome == 'success' && ':green_circle:' || ':red_circle:' }} [pytest result](${{ steps.upload.outputs.artifact-url }})'
+            })
+
 
   workflows:
     needs: [set-env, check-running-allowed]
