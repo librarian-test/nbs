@@ -1,4 +1,5 @@
 pytest
+pytest-html
 flake8
 black[jupyter]
 flake8-docstrings
