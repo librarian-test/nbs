@@ -144,7 +144,9 @@ def decide_scaling(
             to_create,
         )
     elif idle_remaining + busy < max_vms_to_create:
-        to_create = max_vms_to_create - (idle_remaining + busy)
+        to_create = min(
+            max_vms_to_create - (idle_remaining + busy), extra_vms_if_needed
+        )
         logger.info(
             "Not enough total VMs available (idle + busy = %d), creating %d VM(s) to reach the minimum required",
             idle_remaining + busy,
@@ -258,7 +260,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
 
     logger.info("PROJECTED_VM_COUNT=%d", projected_vm_count)
     logger.info("TO_CREATE=%d", to_create)
-    logger.info("TO_REMOVE=%d", len(vms_to_remove))
+    logger.info("TO_REMOVE=%d", len(to_remove))
 
     vms_to_create = (
         [
@@ -269,7 +271,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         else []
     )
 
-    github_output(logger, "VMS_TO_REMOVE", json.dumps(vms_to_remove))
+    github_output(logger, "VMS_TO_REMOVE", json.dumps(to_remove))
     github_output(logger, "VMS_TO_CREATE", json.dumps(vms_to_create))
 
     # clean up github runners that doesn't have a matching VM and are offline
