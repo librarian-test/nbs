@@ -310,7 +310,7 @@ async def main():
             continue
 
         try:
-            request = GetInstanceRequest(name=runner.name)
+            request = GetInstanceRequest(id=runner.name)
             instance = await instance_client.get(request)
             if instance.status.state.name == "RUNNING":
                 logger.info(
