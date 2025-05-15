@@ -44,14 +44,14 @@ def setup_logger():
     return logger
 
 
-def github_output(key: str, value: str, is_secret: bool = False):
+def github_output(
+    logger: logging.Logger, key: str, value: str, is_secret: bool = False
+):
     output_path = os.environ.get("GITHUB_OUTPUT")
     if output_path:
         with open(output_path, "a") as fp:
             fp.write(f"{key}={value}\n")
-    logging.info(
-        'echo "%s=%s" >> $GITHUB_OUTPUT', key, "******" if is_secret else value
-    )
+    logger.info('echo "%s=%s" >> $GITHUB_OUTPUT', key, "******" if is_secret else value)
 
 
 def convert_size(size_bytes):

@@ -190,10 +190,10 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
             request.page_token = response.next_page_token
     except RequestError as err:
         logger.error("Failed to fetch instances from Nebius: %s", err)
-        github_output("RUNNING_VMS_COUNT", "0")
-        github_output("VMS_TO_REMOVE", "[]")
-        github_output("VMS_TO_CREATE", "[]")
-        github_output("DATE", str(now_ts))
+        github_output(logger, "RUNNING_VMS_COUNT", "0")
+        github_output(logger, "VMS_TO_REMOVE", "[]")
+        github_output(logger, "VMS_TO_CREATE", "[]")
+        github_output(logger, "DATE", str(now_ts))
         return
 
     logger.info("Fetched %d instances", len(instances))
@@ -209,6 +209,23 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         len(idle_vm_ids),
         len(busy_vm_ids),
     )
+    # calculating number of workflows that are queued and are waiting for runner with this flavor
+    queued_workflows = repo.get_workflow_runs(status="queued")
+    queued_workflows_count = 0
+    for workflow in queued_workflows:
+        # search through workflow jobs to get labels for jobs with status queued
+        jobs = workflow.jobs()
+        for job in jobs:
+            if job.status != "queued":
+                continue
+            labels = job.labels
+            if f"runner_{args.flavor}" in labels:
+                queued_workflows_count += 1
+                logger.info(
+                    "Found queued workflow %s with flavor %s",
+                    workflow.id,
+                    args.flavor,
+                )
 
     to_create, excess_idle, projected_vm_count = decide_scaling(
         len(matched_vm_ids),
@@ -235,8 +252,8 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         )
 
     logger.info("PROJECTED_VM_COUNT=%d", projected_vm_count)
-    logger.info("FINAL_TO_CREATE=%d", to_create)
-    logger.info("FINAL_TO_REMOVE=%d", len(vms_to_remove))
+    logger.info("TO_CREATE=%d", to_create)
+    logger.info("TO_REMOVE=%d", len(vms_to_remove))
 
     vms_to_create = (
         [
@@ -247,8 +264,8 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         else []
     )
 
-    github_output("VMS_TO_REMOVE", json.dumps(vms_to_remove))
-    github_output("VMS_TO_CREATE", json.dumps(vms_to_create))
+    github_output(logger, "VMS_TO_REMOVE", json.dumps(vms_to_remove))
+    github_output(logger, "VMS_TO_CREATE", json.dumps(vms_to_create))
 
     # clean up github runners that doesn't have a matching VM and are offline
     logger.info("Cleaning up GitHub runners that don't have a matching VM")

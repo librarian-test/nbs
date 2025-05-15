@@ -161,9 +161,9 @@ until [ $exit_code -eq 0 ] || [ $i -gt 3 ]; do
     echo "$((date)) [$i] config.sh exited (or timed-out) with code $exit_code"
     [ $exit_code -eq 0 ] || find /actions-runner -name *.log -print -exec cat {{}} \; # noqa: W605
 done
-# exit code 0 to skip the error and to boot vm correctly
-./svc.sh install
-./svc.sh start
+# true to skip the error and to boot vm correctly
+./svc.sh install || true
+./svc.sh start || true
 """
 
     cloud_init = {
@@ -503,12 +503,12 @@ async def create_vm(sdk: SDK, args: argparse.Namespace, attempt: int = 0):
             instance_id,
             runner_github_label,
         )
-        github_output("instance-id", instance_id)
-        github_output("label", runner_github_label)
-        github_output("local-ipv4", local_ipv4)
-        github_output("vm-preset", args.preset)
+        github_output(logger, "instance-id", instance_id)
+        github_output(logger, "label", runner_github_label)
+        github_output(logger, "local-ipv4", local_ipv4)
+        github_output(logger, "vm-preset", args.preset)
         if external_ipv4:
-            github_output("external-ipv4", external_ipv4)
+            github_output(logger, "external-ipv4", external_ipv4)
 
         logger.info("Waiting for VM to be registered as Github Runner")
         runner_id = wait_for_runner_registration(

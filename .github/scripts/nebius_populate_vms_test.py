@@ -234,6 +234,38 @@ class ScalingTestCase:
         ),
         pytest.param(
             ScalingTestCase(
+                alive=2,
+                idle=0,
+                busy=2,
+                remove=0,
+                max_vms_to_create=4,
+                maximum_amount_of_vms_to_have=6,
+                extra_vms_if_needed=20,
+                expected_create=2,
+                expected_excess_idle=0,
+                expected_projected=4,
+                expect_exception=False,
+            ),
+            id="all-busy-big-extra",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=4,
+                idle=0,
+                busy=4,
+                remove=0,
+                max_vms_to_create=4,
+                maximum_amount_of_vms_to_have=6,
+                extra_vms_if_needed=20,
+                expected_create=2,
+                expected_excess_idle=0,
+                expected_projected=6,
+                expect_exception=False,
+            ),
+            id="all-busy-big-extra-step-2",
+        ),
+        pytest.param(
+            ScalingTestCase(
                 alive=5,
                 idle=5,
                 busy=0,
