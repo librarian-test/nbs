@@ -239,7 +239,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         len(vms_to_remove),
         args.max_vms_to_create,
         args.maximum_amount_of_vms_to_have,
-        args.queued_workflows_count,
+        queued_workflows_count,
     )
 
     if excess_idle > 0:
