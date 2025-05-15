@@ -379,7 +379,7 @@ async def create_vm(sdk: SDK, args: argparse.Namespace, attempt: int = 0):
 
     GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 
-    gh = Github(auth=GithubAuth.Token(GITHUB_TOKEN))
+    gh = Github(GITHUB_TOKEN)
 
     runner_registration_token = get_runner_token(
         args.github_repo_owner, args.github_repo, GITHUB_TOKEN
@@ -526,13 +526,9 @@ async def create_vm(sdk: SDK, args: argparse.Namespace, attempt: int = 0):
 
 
 def remove_runner_from_github(
-    github_repo_owner: str, github_repo: str, vm_id: str, apply: bool
+    client: Github, github_repo_owner: str, github_repo: str, vm_id: str, apply: bool
 ):
-    github_token = os.environ["GITHUB_TOKEN"]
-
-    gh = Github(auth=GithubAuth.Token(github_token))
-
-    runner_id = find_runner_by_name(gh, github_repo_owner, github_repo, vm_id)
+    runner_id = find_runner_by_name(client, github_repo_owner, github_repo, vm_id)
 
     if runner_id is None:
         # this is not critical error, just log it and be done with it,
@@ -541,24 +537,14 @@ def remove_runner_from_github(
         return
 
     if apply:
-        delete_status = requests.delete(
-            f"https://api.github.com/repos/{github_repo_owner}/{github_repo}/actions/runners/{runner_id}",
-            headers={
-                "Authorization": f"Bearer {github_token}",
-                "Accept": "application/vnd.github+json",
-                "X-Github-Api-Version": "2022-11-28",
-            },
+        client.get_repo(os.environ.get("GITHUB_REPOSITORY")).remove_self_hosted_runner(
+            runner_id
         )
-
-        if delete_status.status_code != 204:
+        repo = os.environ.get("GITHUB_REPOSITORY")
+        if not client.get_repo(repo).remove_self_hosted_runner(runner_id):
             # removed throwing exception here, because removing VM is more important
             # added additional logging to see what went wrong
-            logger.info(
-                "Failed to remove runner with name %s, status_code: %d",
-                vm_id,
-                delete_status.status_code,
-            )
-            logger.info("Response: %s", delete_status.text)
+            logger.info("Failed to remove runner with name %s", vm_id)
             return
 
         logger.info("Removed runner with name %s and id %s", vm_id, runner_id)
@@ -633,8 +619,12 @@ async def remove_vm_by_id(sdk: SDK, instance_id: int = None) -> str:
 
 
 async def remove_vm(sdk: SDK, args: argparse.Namespace):
+    GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
+
+    gh = Github(GITHUB_TOKEN)
+
     remove_runner_from_github(
-        args.github_repo_owner, args.github_repo, args.id, args.apply
+        gh, args.github_repo_owner, args.github_repo, args.id, args.apply
     )
 
     if not args.apply:

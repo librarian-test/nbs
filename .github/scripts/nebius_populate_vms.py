@@ -4,8 +4,13 @@ import os
 import asyncio
 import argparse
 from github import Github
+from grpc import StatusCode
 from nebius.sdk import SDK
-from nebius.api.nebius.compute.v1 import InstanceServiceClient, ListInstancesRequest
+from nebius.api.nebius.compute.v1 import (
+    InstanceServiceClient,
+    ListInstancesRequest,
+    GetInstanceRequest,
+)
 from nebius.aio.service_error import RequestError
 from .helpers import setup_logger, github_output
 
@@ -289,6 +294,41 @@ async def main():
 
     github_output("VMS_TO_REMOVE", json.dumps(vms_to_remove))
     github_output("VMS_TO_CREATE", json.dumps(vms_to_create))
+
+    # clean up github runners that doesn't have a matching VM and are offline
+    logger.info("Cleaning up GitHub runners that don't have a matching VM")
+    for runner in list(repo.get_self_hosted_runners()):
+        logger.info(
+            "Runner %s (id: %s, status: %s, busy: %s)",
+            runner.name,
+            runner.id,
+            runner.status,
+            runner.busy,
+        )
+        if runner.status != "offline":
+            logger.info("Runner %s is not offline, skipping", runner.name)
+            continue
+
+        try:
+            request = GetInstanceRequest(name=runner.name)
+            instance = await instance_client.get(request)
+            if instance.status.state.name == "RUNNING":
+                logger.info(
+                    "Runner %s has a matching VM, skipping removal", runner.name
+                )
+                continue
+        except RequestError as err:
+            if err.status.code == StatusCode.NOT_FOUND:
+                logger.info(
+                    "Runner %s does not have a matching VM, removing runner",
+                    runner.name,
+                )
+                if not repo.remove_self_hosted_runner(runner):
+                    logger.error(
+                        "Failed to remove runner %s (id: %s)", runner.name, runner.id
+                    )
+                    return
+                logger.info("Removed runner %s (id: %s)", runner.name, runner.id)
 
 
 if __name__ == "__main__":
