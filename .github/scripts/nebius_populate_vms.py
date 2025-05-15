@@ -310,6 +310,7 @@ async def main():
             continue
 
         try:
+            instance_client = InstanceServiceClient(sdk)
             request = GetInstanceRequest(id=runner.name)
             instance = await instance_client.get(request)
             if instance.status.state.name == "RUNNING":
