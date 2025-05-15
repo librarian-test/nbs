@@ -113,7 +113,7 @@ jobs:
     - name: Set new image id
       run: |
         export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/.github
-        python3 -m scripts.nebius-manage-images \
+        python3 -m scripts.nebius_manage_images \
           --service-account-key sa.json \
           --new-image-id ${NEW_IMAGE_ID} \
           --image-variable-name ${IMAGE_VARIABLE_NAME} ${UPDATE_IMAGE_ID}

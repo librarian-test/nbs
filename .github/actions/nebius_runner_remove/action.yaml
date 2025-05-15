@@ -40,7 +40,7 @@ runs:
       shell: bash
       run: |
         export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/.github
-        python3 -m scripts.nebius-manage-vm remove \
+        python3 -m scripts.nebius_manage_vm remove \
           --github-repo-owner "${REPO_OWNER}" \
           --github-repo "${REPO}" \
           --service-account-key "${SERVICE_ACCOUNT_KEY}" \

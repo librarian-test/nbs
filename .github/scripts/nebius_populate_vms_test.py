@@ -1,20 +1,24 @@
 import pytest
+from dataclasses import dataclass
+from .helpers import setup_logger
 from .nebius_populate_vms import decide_scaling
 
-from dataclasses import dataclass
+logger = setup_logger()
 
 
 @dataclass
 class ScalingTestCase:
-    id: str
-    matched: list
-    idle: list
-    busy: list
-    to_remove: list
-    max_create: int
-    max_total: int
-    extra: int
+    alive: int
+    idle: int
+    busy: int
+    remove: int
+    max_vms_to_create: int
+    maximum_amount_of_vms_to_have: int
+    extra_vms_if_needed: int
     expected_create: int
+    expected_excess_idle: int
+    expected_projected: int
+    expect_exception: bool = False
 
 
 @pytest.mark.parametrize(
@@ -22,93 +26,258 @@ class ScalingTestCase:
     [
         pytest.param(
             ScalingTestCase(
-                id="no-vms-create-one",
-                matched=[],
-                idle=[],
-                busy=[],
-                to_remove=[],
-                max_create=1,
-                max_total=5,
-                extra=1,
+                alive=0,
+                idle=0,
+                busy=0,
+                remove=0,
+                max_vms_to_create=1,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
                 expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=1,
+                expect_exception=False,
             ),
+            id="no-vms-creates-one",
         ),
         pytest.param(
             ScalingTestCase(
-                id="idle-vm-sufficient",
-                matched=["vm1"],
-                idle=["vm1"],
-                busy=[],
-                to_remove=[],
-                max_create=1,
-                max_total=5,
-                extra=1,
+                alive=1,
+                idle=1,
+                busy=0,
+                remove=0,
+                max_vms_to_create=1,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
                 expected_create=0,
+                expected_excess_idle=0,
+                expected_projected=1,
+                expect_exception=False,
             ),
+            id="idle-vm-sufficient",
         ),
         pytest.param(
             ScalingTestCase(
-                id="one-busy-vm-no-create",
-                matched=["vm1"],
-                idle=[],
-                busy=["vm1"],
-                to_remove=[],
-                max_create=1,
-                max_total=5,
-                extra=1,
-                expected_create=0,
-            ),
-        ),
-        pytest.param(
-            ScalingTestCase(
-                id="idle-vm-removed-by-ttl",
-                matched=["vm1"],
-                idle=["vm1"],
-                busy=[],
-                to_remove=["vm1"],
-                max_create=1,
-                max_total=5,
-                extra=1,
+                alive=1,
+                idle=0,
+                busy=1,
+                remove=0,
+                max_vms_to_create=1,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
                 expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=2,
+                expect_exception=False,
             ),
+            id="one-busy-vm-create-one",
         ),
         pytest.param(
             ScalingTestCase(
-                id="busy-vms-allow-extra",
-                matched=["vm1", "vm2"],
-                idle=[],
-                busy=["vm1", "vm2"],
-                to_remove=[],
-                max_create=1,
-                max_total=5,
-                extra=1,
+                alive=1,
+                idle=1,
+                busy=0,
+                remove=1,
+                max_vms_to_create=1,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
                 expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=1,
+                expect_exception=False,
             ),
+            id="idle-vm-removed-by-ttl",
         ),
         pytest.param(
             ScalingTestCase(
-                id="too-many-idle-no-create",
-                matched=["vm1", "vm2", "vm3"],
-                idle=["vm1", "vm2"],
-                busy=["vm3"],
-                to_remove=[],
-                max_create=1,
-                max_total=5,
-                extra=1,
-                expected_create=0,
+                alive=2,
+                idle=0,
+                busy=2,
+                remove=0,
+                max_vms_to_create=1,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
+                expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=3,
+                expect_exception=False,
             ),
+            id="busy-vms-allow-extra",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=3,
+                idle=2,
+                busy=1,
+                remove=0,
+                max_vms_to_create=1,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
+                expected_create=0,
+                expected_excess_idle=1,
+                expected_projected=2,
+                expect_exception=False,
+            ),
+            id="too-many-idle-no-create",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=3,
+                idle=0,
+                busy=3,
+                remove=3,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=2,
+                expected_create=2,
+                expected_excess_idle=0,
+                expected_projected=0,
+                expect_exception=True,
+            ),
+            id="all-busy-vms-to-remove-expect-exception",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=4,
+                idle=3,
+                busy=1,
+                remove=0,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
+                expected_create=0,
+                expected_excess_idle=1,
+                expected_projected=3,
+                expect_exception=False,
+            ),
+            id="excess-idle-no-create",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=4,
+                idle=2,
+                busy=2,
+                remove=1,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=4,
+                extra_vms_if_needed=1,
+                expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=4,
+                expect_exception=False,
+            ),
+            id="projected-equals-cap-no-create",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=4,
+                idle=2,
+                busy=2,
+                remove=1,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=3,
+                extra_vms_if_needed=1,
+                expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=4,
+                expect_exception=True,
+            ),
+            id="projected-exceeds-cap-expect-exception",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=5,
+                idle=0,
+                busy=5,
+                remove=0,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=2,
+                expected_create=0,
+                expected_excess_idle=0,
+                expected_projected=5,
+                expect_exception=False,
+            ),
+            id="maxed-out-no-room-to-scale",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=5,
+                idle=1,
+                busy=4,
+                remove=1,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=2,
+                expected_create=1,
+                expected_excess_idle=0,
+                expected_projected=5,
+                expect_exception=False,
+            ),
+            id="remove-one-add-one-to-maintain-cap",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=2,
+                idle=1,
+                busy=1,
+                remove=0,
+                max_vms_to_create=4,
+                maximum_amount_of_vms_to_have=6,
+                extra_vms_if_needed=2,
+                expected_create=2,
+                expected_excess_idle=0,
+                expected_projected=4,
+                expect_exception=False,
+            ),
+            id="some-idle-some-busy-create-more-to-meet-threshold",
+        ),
+        pytest.param(
+            ScalingTestCase(
+                alive=5,
+                idle=5,
+                busy=0,
+                remove=0,
+                max_vms_to_create=2,
+                maximum_amount_of_vms_to_have=5,
+                extra_vms_if_needed=1,
+                expected_create=0,
+                expected_excess_idle=3,
+                expected_projected=2,
+                expect_exception=False,
+            ),
+            id="remove-from-idle-create-to-maintain",
         ),
     ],
 )
 def test_decide_scaling(case):
-    remove_copy = list(case.to_remove)  # simulate pass-by-reference
-    to_create, projected_vm_count, excess_idle = decide_scaling(
-        case.matched,
-        case.idle,
-        case.busy,
-        remove_copy,
-        case.max_create,
-        case.max_total,
-        case.extra,
-    )
-    assert to_create == case.expected_create
+    exception_type = None
+    try:
+        to_create, excess_idle, projected_vm_count = decide_scaling(
+            case.alive,
+            case.idle,
+            case.busy,
+            case.remove,
+            case.max_vms_to_create,
+            case.maximum_amount_of_vms_to_have,
+            case.extra_vms_if_needed,
+        )
+    except ValueError as e:
+        if case.expect_exception:
+            assert type(e) is ValueError
+        else:
+            assert (
+                not case.expect_exception
+            ), f"Expected no exception, but got {exception_type}"
+            raise
+
+    if not case.expect_exception:
+        assert (
+            to_create == case.expected_create
+        ), f"Expected expected_create={case.expected_create}, got {to_create}"
+        assert (
+            excess_idle == case.expected_excess_idle
+        ), f"Expected expected_excess_idle={case.expected_excess_idle}, got {excess_idle}"
+        assert (
+            projected_vm_count == case.expected_projected
+        ), f"Expected expected_projected={case.expected_projected}, got {projected_vm_count}"
