@@ -226,6 +226,11 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
                     workflow.id,
                     args.flavor,
                 )
+    logger.info(
+        "Total queued workflows with flavor %s: %d",
+        args.flavor,
+        queued_workflows_count,
+    )
 
     to_create, excess_idle, projected_vm_count = decide_scaling(
         len(matched_vm_ids),
@@ -234,7 +239,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         len(vms_to_remove),
         args.max_vms_to_create,
         args.maximum_amount_of_vms_to_have,
-        args.extra_vms_if_needed,
+        args.queued_workflows_count,
     )
 
     if excess_idle > 0:
