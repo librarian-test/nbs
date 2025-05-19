@@ -118,7 +118,7 @@ runs:
 
           if [ -n "$BAZEL_REMOTE_USERNAME" ]; then
             extra_params+=(--bazel-remote-username "$BAZEL_REMOTE_USERNAME")
-            extra_params+=(--bazel-remote-password-file "$BAZEL_REMOTE_PASSWORD_FILE")
+            extra_params+=(--bazel-remote-password-file "$BAZEL_PASSWORD_FILE")
             extra_params+=(--add-result .o)
           fi
 
@@ -232,3 +232,12 @@ runs:
       if: always()
       shell: bash
       run: df -h
+    
+    - name: clean up
+      if: always()
+      shell: bash
+      run: |
+        echo "::group::cleanup"
+        sudo -E -H -u github rm -rf "$TMP_DIR"
+        chown -R root:root $GITHUB_WORKSPACE
+        echo "::endgroup::"
