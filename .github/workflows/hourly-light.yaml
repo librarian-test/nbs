@@ -10,7 +10,7 @@ run-name: |
     }}
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       build_target:
