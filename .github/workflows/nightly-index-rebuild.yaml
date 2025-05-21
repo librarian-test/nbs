@@ -27,7 +27,7 @@ jobs:
         s3_key_secret: ${{ secrets.NEBIUS_AWS_SECRET_ACCESS_KEY }}
         folder_prefix: nebius-
         build_preset: "release"
-        user: runner
+        user: github
     - name: Create indices for main repo
       if: ${{ github.repository == 'ydb-platform/nbs'}}
       shell: bash
