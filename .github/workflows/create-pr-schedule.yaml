@@ -76,7 +76,12 @@ jobs:
             --title "Test PR: $BRANCH" \
             --body "Auto-created test PR for component \`$COMPONENT\` with sanitizer \`$SANITIZER\`." \
             --json number -q .number)
-          echo "pr_number=$PR_URL" >> "$GITHUB_OUTPUT"
+          
+          echo "Created PR at: $PR_URL"
+
+          # Extract PR number from URL (e.g., .../pull/164)
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Add Labels
         env:
