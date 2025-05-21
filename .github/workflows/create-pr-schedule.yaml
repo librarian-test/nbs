@@ -6,9 +6,6 @@ on:
     - cron: "*/30 * * * *"  # Every day at midnight
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
 
 jobs:
   create-test-pr:
@@ -42,14 +39,14 @@ jobs:
 
       - name: Push test branch
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
           BRANCH=${{ steps.rand.outputs.branch }}
           git push "https://x-access-token:${GH_TOKEN}@github.com/librarian-test/nbs.git" HEAD:$BRANCH
 
       - name: Create Pull Request via CLI
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
           BRANCH=${{ steps.rand.outputs.branch }}
           gh pr create \
