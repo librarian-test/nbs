@@ -28,10 +28,11 @@ jobs:
           else
             sanitizer=""
           fi
-
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-          echo "component=$component" >> "$GITHUB_OUTPUT"
-          echo "sanitizer=$sanitizer" >> "$GITHUB_OUTPUT"
+          {
+            echo "branch=$branch"
+            echo "component=$component"
+            echo "sanitizer=$sanitizer"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout repo
         uses: actions/checkout@v4
