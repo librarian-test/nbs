@@ -3,7 +3,7 @@ run-name: ${{ format('Create Test PR ({0})', github.event_name) }}
 
 on:
   schedule:
-    - cron: "*/30 * * * *"  # Every day at midnight
+    - cron: "*/30 * * * *" 
   workflow_dispatch:
 
 
@@ -14,7 +14,24 @@ jobs:
     steps:
       - name: Generate random branch name
         id: rand
-        run: echo "branch=pr-$(shuf -i 1000-99999 -n 1)" >> "$GITHUB_OUTPUT"
+        run: |
+          branch="pr-$(shuf -i 10000-99999 -n 1)"
+
+          # Component selection including "none"
+          options=(filestore blockstore disk_manager tasks none)
+          component=${options[$RANDOM % ${#options[@]}]}
+
+          # Sanitizer only if filestore or blockstore
+          if [[ "$component" == "filestore" || "$component" == "blockstore" ]]; then
+            sanitizers=("asan" "tsan" "msan" "ubsan" "")
+            sanitizer=${sanitizers[$RANDOM % ${#sanitizers[@]}]}
+          else
+            sanitizer=""
+          fi
+
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "component=$component" >> "$GITHUB_OUTPUT"
+          echo "sanitizer=$sanitizer" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -45,13 +62,36 @@ jobs:
           git push "https://x-access-token:${GH_TOKEN}@github.com/librarian-test/nbs.git" HEAD:$BRANCH
 
       - name: Create Pull Request via CLI
+        id: pr
         env:
           GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
           BRANCH=${{ steps.rand.outputs.branch }}
-          gh pr create \
+          COMPONENT=${{ steps.rand.outputs.component }}
+          SANITIZER=${{ steps.rand.outputs.sanitizer }}
+          PR_URL=$(gh pr create \
             --repo librarian-test/nbs \
             --head "$BRANCH" \
             --base main \
             --title "Test PR: $BRANCH" \
-            --body "Auto-created test PR for branch \`$BRANCH\`"
+            --body "Auto-created test PR for component \`$COMPONENT\` with sanitizer \`$SANITIZER\`." \
+            --json number -q .number)
+          echo "pr_number=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Add Labels
+        env:
+          GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+        run: |
+          PR_NUMBER=${{ steps.pr.outputs.pr_number }}
+
+          if [[ "${{ steps.rand.outputs.component }}" != "none" ]]; then
+            gh pr edit "$PR_NUMBER" \
+              --repo librarian-test/nbs \
+              --add-label "${{ steps.rand.outputs.component }}"
+          fi
+
+          if [[ "${{ steps.rand.outputs.sanitizer }}" != "" ]]; then
+            gh pr edit "$PR_NUMBER" \
+              --repo librarian-test/nbs \
+              --add-label "${{ steps.rand.outputs.sanitizer }}"
+          fi
