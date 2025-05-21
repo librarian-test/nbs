@@ -526,29 +526,38 @@ async def create_vm(sdk: SDK, args: argparse.Namespace, attempt: int = 0):
 
 def remove_runner_from_github(
     client: Github, github_repo_owner: str, github_repo: str, vm_id: str, apply: bool
-):
+) -> str:
     runner_id = find_runner_by_name(client, github_repo_owner, github_repo, vm_id)
+    repo = os.environ.get("GITHUB_REPOSITORY")
 
     if runner_id is None:
         # this is not critical error, just log it and be done with it,
         # removing the VM is more important
         logger.info("Runner with name %s not found, skipping", vm_id)
-        return
+        return "not_found"
+
+    runner = client.get_repo(repo).get_self_hosted_runner(runner_id)
+    if runner is None:
+        logger.info("Runner with name %s not found, skipping", vm_id)
+        return "not_found"
+    if runner.busy:
+        logger.info("Runner with name %s is busy, skipping", vm_id)
+        return "busy"
 
     if apply:
-        client.get_repo(os.environ.get("GITHUB_REPOSITORY")).remove_self_hosted_runner(
-            runner_id
-        )
-        repo = os.environ.get("GITHUB_REPOSITORY")
-        if not client.get_repo(repo).remove_self_hosted_runner(runner_id):
+        result = client.get_repo(repo).remove_self_hosted_runner(runner_id)
+
+        if not result:
             # removed throwing exception here, because removing VM is more important
             # added additional logging to see what went wrong
             logger.info("Failed to remove runner with name %s", vm_id)
-            return
+            return "failed"
 
         logger.info("Removed runner with name %s and id %s", vm_id, runner_id)
+        return "removed"
     else:
         logger.info("Would remove runner with name %s and id %s", vm_id, runner_id)
+        return "would_remove"
 
 
 async def remove_disk_by_name(sdk: SDK, args: argparse.Namespace, instance_name: str):
@@ -565,7 +574,7 @@ async def remove_disk_by_name(sdk: SDK, args: argparse.Namespace, instance_name:
         response = await service.get_by_name(request)
         disk_id = response.metadata.id
         if disk_id is None:
-            logger.info("ListDisksRequest result: %s", result)
+            logger.info("ListDisksRequest result: %s", response)
             logger.error(
                 "Failed to find disk with name %s", DISK_NAME_PREFIX + instance_name
             )
@@ -623,9 +632,18 @@ async def remove_vm(sdk: SDK, args: argparse.Namespace):
 
     gh = Github(GITHUB_TOKEN)
 
-    remove_runner_from_github(
+    result = remove_runner_from_github(
         gh, args.github_repo_owner, args.github_repo, args.id, args.apply
     )
+    if result == "not_found":
+        logger.info("Runner with name %s not found in github, we can continue", args.id)
+    elif result == "busy":
+        logger.info("Runner with name %s is busy, skipping", args.id)
+        return
+    elif result == "failed":
+        logger.error("Failed to remove runner with name %s, we can ignore it", args.id)
+    elif result == "removed" or result == "would_remove":
+        logger.info("Runner with name %s removed from github", args.id)
 
     if not args.apply:
         logger.info("Would delete VM with ID %s", args.id)
