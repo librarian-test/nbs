@@ -38,16 +38,19 @@ jobs:
 
       - name: Push test branch
         env:
-          GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH=${{ steps.rand.outputs.branch }}
           git push "https://x-access-token:${GH_TOKEN}@github.com/librarian-test/nbs.git" HEAD:$BRANCH
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          title: "Test PR: ${{ steps.rand.outputs.branch }}"
-          branch: ${{ steps.rand.outputs.branch }}
-          base: main
-          body: "Auto-created test PR for branch `${{ steps.rand.outputs.branch }}`"
+      - name: Create Pull Request via CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH=${{ steps.rand.outputs.branch }}
+          gh pr create \
+            --repo librarian-test/nbs \
+            --head "$BRANCH" \
+            --base main \
+            --title "Test PR: $BRANCH" \
+            --body "Auto-created test PR for branch \`$BRANCH\`"
