@@ -69,34 +69,32 @@ jobs:
           BRANCH=${{ steps.rand.outputs.branch }}
           COMPONENT=${{ steps.rand.outputs.component }}
           SANITIZER=${{ steps.rand.outputs.sanitizer }}
+          # if any label is not none add it comma separated with arguments --label
+          LABELS=()
+          if [[ "$COMPONENT" != "none" ]]; then
+            LABELS+=("$COMPONENT")
+          fi
+          if [[ "$SANITIZER" != "" ]]; then
+            LABELS+=("$SANITIZER")
+          fi
+          LABELS_STR=$(IFS=,; echo "${LABELS[*]}")
+          if [[ -n "$LABELS_STR" ]]; then
+            LABELS_ARG="--label $LABELS_STR"
+          else
+            LABELS_ARG=""
+          fi
+          # Create the PR with the specified labels
           PR_URL=$(gh pr create \
             --repo librarian-test/nbs \
             --head "$BRANCH" \
             --base main \
             --title "Test PR: $BRANCH" \
-            --body "Auto-created test PR for component \`$COMPONENT\` with sanitizer \`$SANITIZER\`." \
-            --json number -q .number)
+            $LABELS_ARG \
+            --body "Auto-created test PR for component \`$COMPONENT\` with sanitizer \`$SANITIZER\`." 
+          )
           
           echo "Created PR at: $PR_URL"
 
           # Extract PR number from URL (e.g., .../pull/164)
           PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-
-      - name: Add Labels
-        env:
-          GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-        run: |
-          PR_NUMBER=${{ steps.pr.outputs.pr_number }}
-
-          if [[ "${{ steps.rand.outputs.component }}" != "none" ]]; then
-            gh pr edit "$PR_NUMBER" \
-              --repo librarian-test/nbs \
-              --add-label "${{ steps.rand.outputs.component }}"
-          fi
-
-          if [[ "${{ steps.rand.outputs.sanitizer }}" != "" ]]; then
-            gh pr edit "$PR_NUMBER" \
-              --repo librarian-test/nbs \
-              --add-label "${{ steps.rand.outputs.sanitizer }}"
-          fi
