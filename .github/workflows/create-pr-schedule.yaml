@@ -1,0 +1,52 @@
+name: Create Test PR 
+run-name: ${{ format('Create Test PR ({0})', github.event_name) }}
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"  # Every day at midnight
+  workflow_dispatch:
+
+jobs:
+  create-test-pr:
+    runs-on: ubuntu-latest
+    if: github.repository == 'librarian-test/nbs'
+    steps:
+      - name: Generate random branch name
+        id: rand
+        run: echo "branch=pr-$(shuf -i 1000-99999 -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false  # We'll use a token instead
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Create test branch and files
+        run: |
+          BRANCH=${{ steps.rand.outputs.branch }}
+          git checkout -b "$BRANCH"
+          echo "Test file" > "$BRANCH"
+          mkdir -p .github
+          echo "Test workflow file" > ".github/$BRANCH"
+          git add "$BRANCH" ".github/$BRANCH"
+          git commit -m "Test PR: $BRANCH"
+
+      - name: Push test branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH=${{ steps.rand.outputs.branch }}
+          git push "https://x-access-token:${GH_TOKEN}@github.com/librarian-test/nbs.git" HEAD:$BRANCH
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Test PR: ${{ steps.rand.outputs.branch }}"
+          branch: ${{ steps.rand.outputs.branch }}
+          base: main
+          body: "Auto-created test PR for branch `${{ steps.rand.outputs.branch }}`"
