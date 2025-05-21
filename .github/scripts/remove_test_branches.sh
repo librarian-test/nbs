@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -xeuo pipefail
+set -euo pipefail
 
 # Ensure we're running against the correct repo
 EXPECTED_REPO="librarian-test/nbs"
