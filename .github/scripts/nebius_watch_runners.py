@@ -37,7 +37,7 @@ def main():
     workflow_runs = repo.get_workflow_runs(status="in_progress")
 
     for run in workflow_runs:
-        for job in run.get_jobs():
+        for job in run.jobs():
             if job.status in ("in_progress", "queued") and job.runner_name:
                 active_jobs[job.runner_name] = {
                     "job_name": job.name,
