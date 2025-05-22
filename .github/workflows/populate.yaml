@@ -94,7 +94,7 @@ jobs:
     needs: calculate_missing_vms
     name: Remove VMs
     if: needs.calculate_missing_vms.outputs.vms_to_remove != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.provision_mode == 'initial' && fromJson('["ubuntu-latest"]') || fromJson('["self-hosted", "runner_light"]') }}
     strategy:
       max-parallel: 5
       matrix:
@@ -119,7 +119,7 @@ jobs:
     needs: calculate_missing_vms
     name: Broken VMs
     if: needs.calculate_missing_vms.outputs.broken_vms_to_remove != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.provision_mode == 'initial' && fromJson('["ubuntu-latest"]') || fromJson('["self-hosted", "runner_light"]') }}
     strategy:
       max-parallel: 5
       matrix:
@@ -144,7 +144,7 @@ jobs:
     needs: calculate_missing_vms
     name: Populate VMs
     if: needs.calculate_missing_vms.outputs.vms_to_create != '[]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.provision_mode == 'initial' && fromJson('["ubuntu-latest"]') || fromJson('["self-hosted", "runner_light"]') }}
     strategy:
       max-parallel: 5
       matrix:
