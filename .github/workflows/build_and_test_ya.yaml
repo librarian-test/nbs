@@ -104,6 +104,10 @@ jobs:
     timeout-minutes: 420
     needs: calculate-runs-on
     steps:
+    - name: Clean up
+      shell: bash --noprofile --norc -eo pipefail -x {0}
+      run: |
+        chown -R root:root $GITHUB_WORKSPACE
     - name: Checkout PR
       uses: actions/checkout@v4
       if: github.event.pull_request.head.sha != ''
