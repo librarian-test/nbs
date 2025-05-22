@@ -26,7 +26,7 @@ runs:
     - name: write service account key to file
       shell: bash
       run: |
-        export SERVICE_ACCOUNT_KEY=$(mktemp -p /home/github sa.XXXX)
+        export SERVICE_ACCOUNT_KEY=$(mktemp sa.XXXX)
         echo "SERVICE_ACCOUNT_KEY=${SERVICE_ACCOUNT_KEY}" >> $GITHUB_ENV
         echo "${KEY_CONTENTS}" > $SERVICE_ACCOUNT_KEY
       env:
