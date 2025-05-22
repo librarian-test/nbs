@@ -56,7 +56,7 @@ jobs:
           echo "Test file" > "$BRANCH"
           mkdir -p .github
           # echo "Test workflow file" > ".github/$BRANCH"
-          # git add "$BRANCH" ".github/$BRANCH"
+           git add "$BRANCH"
           git commit -m "Test PR: $BRANCH"
 
       - name: Push test branch
