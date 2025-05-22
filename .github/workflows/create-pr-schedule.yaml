@@ -37,7 +37,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          persist-credentials: false  # We'll use a token instead
+          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           
 
       - name: Set up Git
@@ -67,7 +67,6 @@ jobs:
           git push "https://x-access-token:${GH_TOKEN}@github.com/librarian-test/nbs.git" HEAD:$BRANCH
 
       - name: Create Pull Request via CLI
-        id: pr
         env:
           GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
@@ -103,8 +102,21 @@ jobs:
           # Extract PR number from URL (e.g., .../pull/164)
           PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+  remove-old-prs:
+    runs-on: ubuntu-latest
+    needs: create-test-pr
+    concurrency:
+      group: remove-old-prs
+    if: github.repository == 'librarian-test/nbs'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          sparse-checkout: '.github'
       - name: Remove old PRs
         env:
           GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
+          sleep 15
           bash .github/scripts/remove_test_branches.sh

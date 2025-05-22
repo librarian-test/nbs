@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 420
     needs: calculate-runs-on
     steps:
-    - name: Clean up
+    - name: Prepare workspace
       shell: bash --noprofile --norc -eo pipefail -x {0}
       run: |
         chown -R root:root $GITHUB_WORKSPACE
@@ -113,7 +113,6 @@ jobs:
       if: github.event.pull_request.head.sha != ''
       with:
         submodules: true
-        set-safe-directory: '*'
         ref: ${{ github.event.pull_request.head.sha }}
         fetch-depth: ${{ !contains(github.event.pull_request.labels.*.name, 'rebase') && 1 || 0 }}
     - name: Rebase PR
