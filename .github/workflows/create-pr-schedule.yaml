@@ -107,6 +107,7 @@ jobs:
     needs: create-test-pr
     concurrency:
       group: remove-old-prs
+      cancel-in-progress: false
     if: github.repository == 'librarian-test/nbs'
     steps:
       - name: Checkout repo

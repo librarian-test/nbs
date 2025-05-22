@@ -55,6 +55,7 @@ on:
 
 concurrency:
   group: 'populate-vms-${{ inputs.flavor }}'
+  cancel-in-progress: false
   
 
 env:
