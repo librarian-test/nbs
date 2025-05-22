@@ -4,6 +4,7 @@ import os
 import argparse
 import datetime
 import requests
+import numpy as np
 from github import Github
 from tabulate import tabulate
 from collections import defaultdict
@@ -15,15 +16,6 @@ from typing import List
 from dataclasses import dataclass
 
 logger = setup_logger()
-
-OWNER = "librarian-test"
-REPO = "nbs"
-TOKEN = os.environ.get("GITHUB_TOKEN")
-if not TOKEN:
-    raise EnvironmentError("GITHUB_TOKEN environment variable not set")
-
-g = Github(TOKEN)
-repo = g.get_repo(f"{OWNER}/{REPO}")
 
 
 @dataclass
@@ -77,7 +69,7 @@ def classify_runner(labels):
 def get_jobs_raw(repo_full_name, run_id):
     url = f"https://api.github.com/repos/{repo_full_name}/actions/runs/{run_id}/jobs?per_page=100"
     headers = {
-        "Authorization": f"Bearer {TOKEN}",
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json",
     }
     response = requests.get(url, headers=headers)
@@ -86,12 +78,12 @@ def get_jobs_raw(repo_full_name, run_id):
 
 
 def output_results(all_jobs: List[Job], summary):
-    logger.info("=== Job Wait Times ===")
+    print("=== Job Wait Times ===")
     print(
         tabulate(
             [
                 [
-                    f"{job.run_id}/job/{job.id}",
+                    f"{job.run_id}:{job.id}",
                     job.workflow.replace(".yaml", "").replace(".yml", ""),
                     job.name,
                     job.runner,
@@ -113,23 +105,34 @@ def output_results(all_jobs: List[Job], summary):
         )
     )
 
-    logger.info("=== Summary ===")
+    print("=== Summary ===")
     print(
         tabulate(
             [
                 [
                     runner,
                     data["count"],
-                    data["total_wait"],
+                    int(data["total_wait"]),
                     (
                         round(data["total_wait"] / data["count"], 2)
                         if data["count"]
                         else 0
                     ),
+                    int(np.percentile(data["waits"], 1)) if data["waits"] else "N/A",
+                    int(np.percentile(data["waits"], 50)) if data["waits"] else "N/A",
+                    int(np.percentile(data["waits"], 99)) if data["waits"] else "N/A",
                 ]
                 for runner, data in summary.items()
             ],
-            headers=["Runner Type", "Job Count", "Total Wait (s)", "Avg Wait (s)"],
+            headers=[
+                "Runner Type",
+                "Job Count",
+                "Total Wait (s)",
+                "Avg Wait (s)",
+                "P1 (s)",
+                "Median (s)",
+                "P99 (s)",
+            ],
         )
     )
 
@@ -137,7 +140,7 @@ def output_results(all_jobs: List[Job], summary):
 def main(start, end):
     logger.info(f"Fetching workflow runs from {start} to {end}")
     all_jobs = []
-    summary = defaultdict(lambda: {"total_wait": 0.0, "count": 0})
+    summary = defaultdict(lambda: {"total_wait": 0.0, "count": 0, "waits": []})
 
     runs = repo.get_workflow_runs()
     for run in runs:
@@ -180,13 +183,15 @@ def main(start, end):
                 wait_sec = (started_dt - queued_dt).total_seconds()
 
             runner_type = classify_runner(labels)
-
+            name_string = name.split("/")[-1].strip()
+            # remove anything inside [] brackets
+            name_string = name_string.split("[")[0].strip()
             all_jobs.append(
                 Job(
                     workflow=run.path.split("/")[-1],
                     id=job["id"],
                     run_id=run.id,
-                    name=name.split("/")[-1].strip(),
+                    name=name_string,
                     runner=runner_type,
                     queued_at=queued_dt,
                     started_at=started_dt,
@@ -197,6 +202,7 @@ def main(start, end):
             if wait_sec is not None:
                 summary[runner_type]["total_wait"] += wait_sec
                 summary[runner_type]["count"] += 1
+                summary[runner_type]["waits"].append(wait_sec)
 
     output_results(all_jobs, summary)
 
@@ -217,10 +223,36 @@ if __name__ == "__main__":
         default="now",
         help="End of time window (e.g. now, 2025-05-21T00:00:00Z)",
     )
+    parser.add_argument(
+        "--owner",
+        type=str,
+        default="librarian-test",
+        help="GitHub repository owner ",
+    )
+    parser.add_argument(
+        "--repo",
+        type=str,
+        default="nbs",
+        help="GitHub repository name ",
+    )
+    parser.add_argument(
+        "--token",
+        type=str,
+        help="GitHub token for authentication",
+    )
     args = parser.parse_args()
 
     now = datetime.datetime.now(datetime.timezone.utc)
     start = parse_datetime(args.since, now)
     end = parse_datetime(args.until, now)
+
+    GITHUB_TOKEN = args.token if args.token else os.getenv("GITHUB_TOKEN")
+    if not GITHUB_TOKEN:
+        raise EnvironmentError(
+            "GITHUB_TOKEN environment variable not set or passed as argument."
+        )
+
+    g = Github(GITHUB_TOKEN)
+    repo = g.get_repo(f"{args.owner}/{args.repo}")
 
     main(start, end)
