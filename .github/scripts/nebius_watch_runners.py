@@ -41,6 +41,8 @@ def main():
             if job.status in ("in_progress", "queued") and job.runner_name:
                 active_jobs[job.runner_name] = {
                     "job_name": job.name,
+                    "job_id": job.id,
+                    "run_id": run.id,
                     "workflow": run.name,
                     "html_url": job.html_url,
                 }
@@ -52,21 +54,48 @@ def main():
         name = runner.name
         status = runner.status
         busy = runner.busy
-        labels = [label["name"] for label in runner.labels]
-        runner_label = next((l for l in labels if l.startswith("runner_")), "")
         current_job = active_jobs.get(name)
-
+        runner_label = ", ".join(
+            label["name"]
+            for label in runner.labels()
+            if label["name"].startswith("runner")
+        )
         job_info = (
-            f'{current_job["job_name"]} ({current_job["workflow"]})'
-            if current_job
-            else ""
+            f'{current_job["job_name"].split("/")[-1].strip()}' if current_job else ""
         )
 
-        table.append([runner_id, name, status, busy, runner_label, job_info])
+        workflow_info = f'{current_job["workflow"]}' if current_job else ""
+
+        job_id = f'{current_job["job_id"]}' if current_job else ""
+        workflow_id = f'{current_job["run_id"]}' if current_job else ""
+
+        table.append(
+            [
+                runner_id,
+                name,
+                status,
+                busy,
+                runner_label,
+                job_info,
+                job_id,
+                workflow_info,
+                workflow_id,
+            ]
+        )
 
     # Display
-    headers = ["ID", "Runner Name", "Status", "Busy", "Runner Label", "Current Job"]
-    print(tabulate(table, headers=headers, tablefmt="github"))
+    headers = [
+        "ID",
+        "Runner Name",
+        "Status",
+        "Busy",
+        "Runner Label",
+        "Job",
+        "Job ID",
+        "Workflow",
+        "Workflow ID",
+    ]
+    print(tabulate(table, headers=headers))
 
 
 if __name__ == "__main__":
