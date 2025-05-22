@@ -45,7 +45,7 @@ runs:
     - name: write service account key to file
       shell: bash
       run: |
-        export SERVICE_ACCOUNT_KEY=$(mktemp)
+        export SERVICE_ACCOUNT_KEY=$(mktemp -p /home/github sa.XXXX)
         echo "SERVICE_ACCOUNT_KEY=${SERVICE_ACCOUNT_KEY}" >> $GITHUB_ENV
         echo "${KEY_CONTENTS}" > $SERVICE_ACCOUNT_KEY
       env:
@@ -68,7 +68,7 @@ runs:
           --flavor "${FLAVOR}" \
           --vms-older-than "${VMS_OLDER_THAN}" \
           --maximum-amount-of-vms-to-have "${MAXIMUM_AMOUNT_OF_VMS_TO_HAVE}" \
-          --extra-vms-if-needed "${EXTRA_VMS_IF_NEEDED}" 
+          --extra-vms-if-needed "${EXTRA_VMS_IF_NEEDED}"
       env:
         OWNER: ${{ github.event.repository.owner.login }}
         REPO: ${{ github.event.repository.name }}
@@ -79,3 +79,7 @@ runs:
         FLAVOR: ${{ inputs.flavor }}
         VMS_OLDER_THAN: ${{ inputs.vms_ttl }}
         GITHUB_TOKEN: ${{ inputs.token }}
+    - name: cleanup
+      if: always()
+      shell: bash
+      run: rm -f "${SERVICE_ACCOUNT_KEY}"

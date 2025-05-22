@@ -79,7 +79,7 @@ runs:
           echo "REPORTS_ARTIFACTS_DIR=$TMP_DIR/artifacts/test_reports"
           echo "JUNIT_REPORT_XML=$TMP_DIR/junit.xml"
           echo "JUNIT_REPORT_PARTS=$TMP_DIR/junit-split"
-          echo "SUMMARY_LINKS=$(mktemp -p /home/github)"
+          echo "SUMMARY_LINKS=$(mktemp -p /home/github summary_links.XXXX)"
         } | tee -a $GITHUB_ENV
 
     - name: prepare
@@ -105,7 +105,7 @@ runs:
       env:
         BAZEL_REMOTE_PASSWORD: ${{ inputs.bazel_remote_password }}
       run: |
-        export BAZEL_REMOTE_PASSWORD_FILE=$(mktemp)
+        export BAZEL_REMOTE_PASSWORD_FILE=$(mktemp -p /home/github bazel.XXXX)
         echo -n "$BAZEL_REMOTE_PASSWORD" > "$BAZEL_REMOTE_PASSWORD_FILE"
         echo "BAZEL_REMOTE_PASSWORD_FILE=$BAZEL_REMOTE_PASSWORD_FILE" >> "$GITHUB_ENV"
         chmod 600 "$BAZEL_REMOTE_PASSWORD_FILE"
@@ -362,7 +362,7 @@ runs:
 
             platform_name=$(uname | tr '[:upper:]' '[:lower:]')-$(arch)
 
-            export SUMMARY_OUT_ENV_PATH=$(mktemp -p /home/github)
+            export SUMMARY_OUT_ENV_PATH=$(mktemp -p /home/github summary.XXXX)
             chown github:github $SUMMARY_OUT_ENV_PATH
             sudo -E -H -u github .github/scripts/tests/generate-summary.py \
               --summary-out-path "$ARTIFACTS_DIR/summary/${i}/" \
@@ -372,6 +372,7 @@ runs:
               "Tests" ya-test.html "${JUNIT_REPORT_XML}.${i}"
 
             cat $SUMMARY_OUT_ENV_PATH | tee -a $GITHUB_STEP_SUMMARY
+            echo "SUMMARY_OUT_ENV_PATH=$SUMMARY_OUT_ENV_PATH" >> $GITHUB_ENV
             echo "::endgroup::"
           fi
         done
@@ -558,6 +559,7 @@ runs:
       shell: bash
       run: |
         echo "::group::clean-up"
-        sudo -E -H -u github rm -rf $TMP_DIR $SUMMARY_LINKS
-        chown -R root:root $GITHUB_WORKSPACE
+        sudo -E -H -u github rm -rf $TMP_DIR $SUMMARY_LINKS $BAZEL_REMOTE_PASSWORD_FILE \
+                                    $SUMMARY_OUT_ENV_PATH $SUMMARY_LINKS
+        chown -R root:root $GITHUB_WORKSPACE 
         echo "::endgroup::"

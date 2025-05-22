@@ -96,7 +96,7 @@ runs:
     - name: write service account key to file
       shell: bash
       run: |
-        export SERVICE_ACCOUNT_KEY=$(mktemp)
+        export SERVICE_ACCOUNT_KEY=$(mktemp -p /home/github sa.XXXX)
         echo "SERVICE_ACCOUNT_KEY=${SERVICE_ACCOUNT_KEY}" >> $GITHUB_ENV
         echo "${KEY_CONTENTS}" > $SERVICE_ACCOUNT_KEY
       env:
@@ -143,6 +143,10 @@ runs:
         VM_USER_PASSWD: ${{ inputs.vm_user_passwd }}
         VM_ALLOW_DOWNGRADE: ${{ inputs.vm_allow_downgrade == 'yes' && '--allow-downgrade' || '' }}
 
+    - name: cleanup
+      if: always()
+      shell: bash
+      run: rm -f "${SERVICE_ACCOUNT_KEY}"
     - name: save console output if we had any
       if: ${{ steps.create-vm.outputs.console-output }}
       uses: actions/upload-artifact@v4

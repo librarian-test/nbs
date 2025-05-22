@@ -54,9 +54,10 @@ jobs:
           BRANCH=${{ steps.rand.outputs.branch }}
           git checkout -b "$BRANCH"
           echo "Test file" > "$BRANCH"
+          git add "$BRANCH"
           mkdir -p .github
           # echo "Test workflow file" > ".github/$BRANCH"
-           git add "$BRANCH"
+          # git add "$BRANCH" ".github/$BRANCH"
           git commit -m "Test PR: $BRANCH"
 
       - name: Push test branch

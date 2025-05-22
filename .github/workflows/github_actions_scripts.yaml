@@ -76,8 +76,6 @@ jobs:
       with:
         submodules: false
         sparse-checkout: '.github'
-    - name: Prepare VM
-      uses: ./.github/actions/prepare
     - name: Prepare env
       shell: bash
       run: |
