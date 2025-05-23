@@ -1,13 +1,35 @@
 #!/usr/bin/env python3
 import os
+import asyncio
 import argparse
 from github import Github
 from tabulate import tabulate
+from .helpers import setup_logger
+import datetime
+
+from nebius.sdk import SDK
+from nebius.aio.service_error import RequestError
+from nebius.api.nebius.compute.v1 import (
+    InstanceServiceClient,
+    GetInstanceRequest,
+)
+
+logger = setup_logger()
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Show self-hosted runners and their active jobs."
+    )
+    parser.add_argument(
+        "--api-endpoint",
+        default="api.ai.nebius.cloud",
+        help="Cloud API Endpoint",
+    )
+    parser.add_argument(
+        "--service-account-key",
+        required=True,
+        help="Path to the service account key file",
     )
     parser.add_argument("--owner", required=True, help="GitHub organization or user")
     parser.add_argument("--repo", required=True, help="GitHub repository name")
@@ -17,7 +39,24 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def created_at_to_formatted_string(created_at: datetime.datetime) -> str:
+    """Convert a datetime object to a formatted string."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    age = now - created_at
+
+    age_days = age.days
+    age_hours, remainder = divmod(age.seconds, 3600)
+    age_minutes, _ = divmod(remainder, 60)
+
+    if age_days > 0:
+        return f"{age_days}d{age_hours}h{age_minutes}m"
+    elif age_hours > 0:
+        return f"{age_hours}h{age_minutes}m"
+    else:
+        return f"{age_minutes}m"
+
+
+async def main():
     args = parse_args()
     token = args.token or os.environ.get("GITHUB_TOKEN")
     if not token:
@@ -25,6 +64,9 @@ def main():
             "Error: GitHub token must be provided with --token or GITHUB_TOKEN environment variable."
         )
         exit(1)
+
+    sdk = SDK(credentials_file_name=args.service_account_key)
+    service = InstanceServiceClient(sdk)
 
     g = Github(token)
     repo = g.get_repo(f"{args.owner}/{args.repo}")
@@ -69,15 +111,24 @@ def main():
         job_id = f'{current_job["job_id"]}' if current_job else ""
         workflow_id = f'{current_job["run_id"]}' if current_job else ""
 
+        # calculate age of the instance
+        try:
+            response = await service.get(GetInstanceRequest(id=name))
+        except RequestError:
+            logger.error(f"Error fetching instance {runner_id}")
+
+        age_str = created_at_to_formatted_string(response.metadata.created_at)
+
         table.append(
             [
                 runner_id,
+                age_str,
                 name,
                 status,
                 "BUSY" if busy else "FREE",
                 runner_label.replace("runner_", "").strip(),
                 workflow_info,
-                job_info,
+                job_info.replace("Build and test", "").strip(),
                 workflow_id,
                 job_id,
             ]
@@ -86,6 +137,7 @@ def main():
     # Display
     headers = [
         "ID",
+        "Age",
         "Runner Name",
         "Status",
         "Busy",
@@ -99,4 +151,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
