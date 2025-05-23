@@ -569,7 +569,7 @@ runs:
       run: |
         echo "::group::reboot"
         (
-          sleep 5;
+          sleep 15;
           sudo reboot;
         )&
         echo "::endgroup::"

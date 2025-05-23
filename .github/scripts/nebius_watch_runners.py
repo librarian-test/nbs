@@ -56,6 +56,15 @@ def created_at_to_formatted_string(created_at: datetime.datetime) -> str:
         return f"{age_minutes}m"
 
 
+def compact_job_name(job_name: str) -> str:
+    """Convert a job name to a compact format."""
+    if job_name.startswith("Build and test"):
+        return job_name.replace("Build and test", "Build").strip()
+    if job_name.startswith("Populate VMs"):
+        return job_name.split("(")[0].strip()
+    return job_name
+
+
 async def main():
     args = parse_args()
     token = args.token or os.environ.get("GITHUB_TOKEN")
@@ -128,7 +137,7 @@ async def main():
                 "BUSY" if busy else "FREE",
                 runner_label.replace("runner_", "").strip(),
                 workflow_info,
-                job_info.replace("Build and test", "").strip(),
+                compact_job_name(job_info),
                 workflow_id,
                 job_id,
             ]
