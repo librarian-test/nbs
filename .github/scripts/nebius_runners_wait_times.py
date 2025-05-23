@@ -120,6 +120,9 @@ def output_results(all_jobs: List[Job], summary):
                     ),
                     int(np.percentile(data["waits"], 1)) if data["waits"] else "N/A",
                     int(np.percentile(data["waits"], 50)) if data["waits"] else "N/A",
+                    int(np.percentile(data["waits"], 80)) if data["waits"] else "N/A",
+                    int(np.percentile(data["waits"], 90)) if data["waits"] else "N/A",
+                    int(np.percentile(data["waits"], 95)) if data["waits"] else "N/A",
                     int(np.percentile(data["waits"], 99)) if data["waits"] else "N/A",
                 ]
                 for runner, data in summary.items()
@@ -131,6 +134,9 @@ def output_results(all_jobs: List[Job], summary):
                 "Avg Wait (s)",
                 "P1 (s)",
                 "Median (s)",
+                "P80 (s)",
+                "P90 (s)",
+                "P95 (s)",
                 "P99 (s)",
             ],
         )

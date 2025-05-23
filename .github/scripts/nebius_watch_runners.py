@@ -74,12 +74,12 @@ def main():
                 runner_id,
                 name,
                 status,
-                busy,
-                runner_label,
-                job_info,
-                job_id,
+                "BUSY" if busy else "FREE",
+                runner_label.replace("runner_", "").strip(),
                 workflow_info,
+                job_info,
                 workflow_id,
+                job_id,
             ]
         )
 
@@ -89,11 +89,11 @@ def main():
         "Runner Name",
         "Status",
         "Busy",
-        "Runner Label",
-        "Job",
-        "Job ID",
+        "Type",
         "Workflow",
+        "Job",
         "Workflow ID",
+        "Job ID",
     ]
     print(tabulate(table, headers=headers))
 
