@@ -59,10 +59,17 @@ def created_at_to_formatted_string(created_at: datetime.datetime) -> str:
 def compact_job_name(job_name: str) -> str:
     """Convert a job name to a compact format."""
     if job_name.startswith("Build and test"):
-        return job_name.replace("Build and test", "Build").strip()
-    if job_name.startswith("Populate VMs"):
+        return job_name.replace("Build and test", "").strip()
+    if "(" in job_name:
         return job_name.split("(")[0].strip()
     return job_name
+
+
+def compact_workflow_name(workflow_name: str) -> str:
+    """Convert a workflow name to a compact format."""
+    if "(" in workflow_name:
+        return workflow_name.split("(")[0].strip()
+    return workflow_name
 
 
 async def main():
@@ -128,15 +135,21 @@ async def main():
 
         age_str = created_at_to_formatted_string(response.metadata.created_at)
 
+        ip = "N/A"
+        if response.status.state.name == "RUNNING":
+            ip = response.status.network_interfaces[0].public_ip_address.address
+            ip = ip.split("/")[0]
+
         table.append(
             [
                 runner_id,
                 age_str,
+                ip,
                 name,
                 status,
                 "BUSY" if busy else "FREE",
                 runner_label.replace("runner_", "").strip(),
-                workflow_info,
+                compact_workflow_name(workflow_info),
                 compact_job_name(job_info),
                 workflow_id,
                 job_id,
@@ -147,6 +160,7 @@ async def main():
     headers = [
         "ID",
         "Age",
+        "IP",
         "Runner Name",
         "Status",
         "Busy",
