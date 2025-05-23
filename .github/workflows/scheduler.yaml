@@ -59,7 +59,7 @@ concurrency:
   
 
 env:
-  disk_size: ${{ inputs.flavor == 'heavy' && 1023 || 93 }}
+  disk_size: ${{ inputs.flavor == 'heavy' && 2046 || 93 }}
   preset: ${{ inputs.flavor == 'heavy' && vars.NEBIUS_VM_PRESET || '4vcpu-16gb' }}
 
 
