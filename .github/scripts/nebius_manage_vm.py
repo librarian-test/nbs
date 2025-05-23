@@ -540,6 +540,13 @@ def remove_runner_from_github(
     if runner is None:
         logger.info("Runner with name %s not found, skipping", vm_id)
         return "not_found"
+    logger.info(
+        "Runner with name %s found: id:%s status:%s busy: %s ",
+        runner.name,
+        runner.id,
+        runner.status,
+        runner.busy,
+    )
     if runner.busy:
         logger.info("Runner with name %s is busy, skipping", vm_id)
         return "busy"
