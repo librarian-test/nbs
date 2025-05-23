@@ -3,14 +3,18 @@ run-name: ${{ format('Create Test PR ({0})', github.event_name) }}
 
 on:
   schedule:
-    - cron: "*/30 * * * *" 
+    - cron: "* * * * *" 
   workflow_dispatch:
-
 
 jobs:
   create-test-pr:
     runs-on: ubuntu-latest
     if: github.repository == 'librarian-test/nbs'
+    strategy:
+      fail-fast: false
+      matrix:
+        count: [1, 2, 3]
+
     steps:
       - name: Generate random branch name
         id: rand
@@ -34,7 +38,7 @@ jobs:
             echo "sanitizer=$sanitizer"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Checkout repo
+      - name: Checkout repo 
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
@@ -67,7 +71,7 @@ jobs:
           BRANCH=${{ steps.rand.outputs.branch }}
           git push "https://x-access-token:${GH_TOKEN}@github.com/librarian-test/nbs.git" HEAD:$BRANCH
 
-      - name: Create Pull Request via CLI
+      - name: Create Pull Request via CLI ${{ matrix.count }}
         env:
           GH_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
