@@ -3,37 +3,16 @@
 import os
 import argparse
 import datetime
-import requests
 import numpy as np
 from github import Github
 from tabulate import tabulate
 from collections import defaultdict
 from dateutil import parser as dateparser
 from dateutil.relativedelta import relativedelta
-from .helpers import setup_logger
+from .helpers import setup_logger, get_jobs_raw, Job
 from typing import List
 
-from dataclasses import dataclass
-
 logger = setup_logger()
-
-
-@dataclass
-class Job:
-    workflow: str
-    id: int
-    run_id: int
-    name: str
-    runner: str
-    queued_at: datetime.datetime
-    started_at: datetime.datetime
-    wait_sec: float
-
-    def __post_init__(self):
-        if self.wait_sec is None:
-            self.wait_sec = 0.0
-        else:
-            self.wait_sec = (self.started_at - self.queued_at).total_seconds()
 
 
 # --- Utilities ---
@@ -53,30 +32,6 @@ def parse_datetime(value, now=None):
         )
 
 
-def classify_runner(labels):
-    if "self-hosted" in labels:
-        if "runner_light" in labels:
-            return "runner_light"
-        elif "runner_heavy" in labels:
-            return "runner_heavy"
-        else:
-            return "runner_none"
-    else:
-        image_labels = [label for label in labels if label not in ("Linux", "X64")]
-        return f"{image_labels[0]}" if image_labels else "unknown"
-
-
-def get_jobs_raw(repo_full_name, run_id):
-    url = f"https://api.github.com/repos/{repo_full_name}/actions/runs/{run_id}/jobs?per_page=100"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-    }
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()["jobs"]
-
-
 def output_results(all_jobs: List[Job], summary):
     print("=== Job Wait Times ===")
     print(
@@ -86,10 +41,10 @@ def output_results(all_jobs: List[Job], summary):
                     f"{job.run_id}:{job.id}",
                     job.workflow.replace(".yaml", "").replace(".yml", ""),
                     job.name,
-                    job.runner,
-                    job.queued_at.isoformat() if job.queued_at else "N/A",
+                    job.runner_type,
+                    job.created_at.isoformat() if job.created_at else "N/A",
                     job.started_at.isoformat() if job.started_at else "N/A",
-                    job.wait_sec,
+                    (job.started_at - job.created_at).total_seconds(),
                 ]
                 for job in all_jobs
             ],
@@ -158,17 +113,18 @@ def main(start, end):
             continue
 
         try:
-            jobs = get_jobs_raw(repo.full_name, run.id)
+            jobs = get_jobs_raw(GITHUB_TOKEN, repo.full_name, run.id)
         except Exception as e:
             logger.warning(f"Failed to get jobs for run {run.id}: {e}")
             continue
 
         for job in jobs:
-            name = job["name"]
-            queued_at = job.get("created_at")
-            started_at = job.get("started_at")
-            conclusion = job.get("conclusion")
-            labels = job.get("labels", [])
+            name = job.name
+            created_at = job.created_at
+            started_at = job.started_at
+            conclusion = job.conclusion
+            wait_sec = (job.started_at - job.created_at).total_seconds()
+            labels = job.labels
 
             if conclusion == "skipped":
                 logger.debug(f"Job {name} was skipped; skipping.")
@@ -178,37 +134,29 @@ def main(start, end):
                 logger.debug(f"Job {name} was cancelled; skipping.")
                 continue
 
-            wait_sec = None
-            if queued_at and started_at:
-                queued_dt = datetime.datetime.fromisoformat(
-                    queued_at.replace("Z", "+00:00")
-                )
-                started_dt = datetime.datetime.fromisoformat(
-                    started_at.replace("Z", "+00:00")
-                )
-                wait_sec = (started_dt - queued_dt).total_seconds()
-
-            runner_type = classify_runner(labels)
             name_string = name.split("/")[-1].strip()
             # remove anything inside [] brackets
             name_string = name_string.split("[")[0].strip()
             all_jobs.append(
                 Job(
                     workflow=run.path.split("/")[-1],
-                    id=job["id"],
+                    id=job.id,
                     run_id=run.id,
+                    runner_name=job.runner_name,
+                    completed_at=job.completed_at,
                     name=name_string,
-                    runner=runner_type,
-                    queued_at=queued_dt,
-                    started_at=started_dt,
-                    wait_sec=wait_sec,
+                    status=job.status,
+                    conclusion=job.conclusion,
+                    runner_type=job.runner_type,
+                    created_at=created_at,
+                    started_at=started_at,
                 )
             )
 
             if wait_sec is not None:
-                summary[runner_type]["total_wait"] += wait_sec
-                summary[runner_type]["count"] += 1
-                summary[runner_type]["waits"].append(wait_sec)
+                summary[job.runner_type]["total_wait"] += wait_sec
+                summary[job.runner_type]["count"] += 1
+                summary[job.runner_type]["waits"].append(wait_sec)
 
     output_results(all_jobs, summary)
 

@@ -4,7 +4,13 @@ import asyncio
 import argparse
 from github import Github
 from tabulate import tabulate
-from .helpers import setup_logger
+from .helpers import (
+    setup_logger,
+    get_jobs_raw,
+    compact_workflow_name,
+    compact_job_name,
+    date_to_hms,
+)
 import datetime
 
 from nebius.sdk import SDK
@@ -39,39 +45,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def created_at_to_formatted_string(created_at: datetime.datetime) -> str:
-    """Convert a datetime object to a formatted string."""
-    now = datetime.datetime.now(datetime.timezone.utc)
-    age = now - created_at
-
-    age_days = age.days
-    age_hours, remainder = divmod(age.seconds, 3600)
-    age_minutes, _ = divmod(remainder, 60)
-
-    if age_days > 0:
-        return f"{age_days}d{age_hours}h{age_minutes}m"
-    elif age_hours > 0:
-        return f"{age_hours}h{age_minutes}m"
-    else:
-        return f"{age_minutes}m"
-
-
-def compact_job_name(job_name: str) -> str:
-    """Convert a job name to a compact format."""
-    if job_name.startswith("Build and test"):
-        return job_name.replace("Build and test", "").strip()
-    if "(" in job_name:
-        return job_name.split("(")[0].strip()
-    return job_name
-
-
-def compact_workflow_name(workflow_name: str) -> str:
-    """Convert a workflow name to a compact format."""
-    if "(" in workflow_name:
-        return workflow_name.split("(")[0].strip()
-    return workflow_name
-
-
 async def main():
     args = parse_args()
     token = args.token or os.environ.get("GITHUB_TOKEN")
@@ -95,14 +68,15 @@ async def main():
     workflow_runs = repo.get_workflow_runs(status="in_progress")
 
     for run in workflow_runs:
-        for job in run.jobs():
+        for job in get_jobs_raw(token, repo.full_name, run.id):
             if job.status in ("in_progress", "queued") and job.runner_name:
                 active_jobs[job.runner_name] = {
                     "job_name": job.name,
                     "job_id": job.id,
+                    "job_took_raw": job.created_at,
+                    "job_took_real": job.started_at,
                     "run_id": run.id,
                     "workflow": run.name,
-                    "html_url": job.html_url,
                 }
 
     # Prepare data
@@ -113,6 +87,16 @@ async def main():
         status = runner.status
         busy = runner.busy
         current_job = active_jobs.get(name)
+        took_real = (
+            current_job["job_took_real"]
+            if current_job
+            else datetime.datetime.now(tz=datetime.timezone.utc)
+        )
+        took_raw = (
+            current_job["job_took_raw"]
+            if current_job
+            else datetime.datetime.now(tz=datetime.timezone.utc)
+        )
         runner_label = ", ".join(
             label["name"]
             for label in runner.labels()
@@ -133,7 +117,7 @@ async def main():
         except RequestError:
             logger.error(f"Error fetching instance {runner_id}")
 
-        age_str = created_at_to_formatted_string(response.metadata.created_at)
+        age_str = date_to_hms(response.metadata.created_at)
 
         ip = "N/A"
         if response.status.state.name == "RUNNING":
@@ -153,8 +137,12 @@ async def main():
                 compact_job_name(job_info),
                 workflow_id,
                 job_id,
+                date_to_hms(took_real),
+                date_to_hms(took_raw),
             ]
         )
+    # sort by type and then by id
+    table = sorted(table, key=lambda x: (x[6], x[0]))
 
     # Display
     headers = [
@@ -169,6 +157,8 @@ async def main():
         "Job",
         "Workflow ID",
         "Job ID",
+        "Real Time",
+        "Raw Time",
     ]
     print(tabulate(table, headers=headers))
 
