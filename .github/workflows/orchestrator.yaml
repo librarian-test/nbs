@@ -1,10 +1,10 @@
 name: Orchestrator
-run-name: ${{ format('Orchestrator ({0} {1} {2})', github.event_name, github.event.schedule == '*/30 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none'), github.event.schedule == '*/15 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none'))  }}
+run-name: ${{ format('Orchestrator ({0} {1} {2})', github.event_name, github.event.schedule == '5,20,35,50 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none'), github.event.schedule == '1,16,31,46 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none'))  }}
       
 on:
   schedule:
-    - cron: '*/30 * * * *' # Every 30 minutes for light VMs
-    - cron: '*/15 * * * *' # Every 15 minutes for heavy VMs  
+    - cron: '5,20,35,50 * * * *' # Every 30 minutes for light VMs
+    - cron: '1,16,31,46 * * * *' # Every 15 minutes for heavy VMs  
   workflow_dispatch:
     inputs:
       provision_mode:
@@ -41,13 +41,13 @@ on:
         default: "yes"
 
 concurrency:
-  group: orchestrator-${{ github.event.schedule == '*/30 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none')}}-${{ github.event.schedule == '*/15 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none') }}
+  group: orchestrator-${{ github.event.schedule == '5,20,35,50 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none')}}-${{ github.event.schedule == '1,16,31,46 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none') }}
   cancel-in-progress: true
 
 jobs:
   light:
     name: Populate light VMs
-    if: ${{ inputs.run_light == 'yes' || (github.event_name == 'schedule' && github.event.schedule == '*/30 * * * *') }}
+    if: ${{ inputs.run_light == 'yes' || (github.event_name == 'schedule' && github.event.schedule == '5,20,35,50 * * * *') }}
     uses: ./.github/workflows/scheduler.yaml
     secrets: inherit
     with:
@@ -59,7 +59,7 @@ jobs:
 
   heavy:
     name: Populate heavy VMs
-    if: ${{ inputs.run_heavy == 'yes' || (github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *') }}
+    if: ${{ inputs.run_heavy == 'yes' || (github.event_name == 'schedule' && github.event.schedule == '1,16,31,46 * * * *') }}
     uses: ./.github/workflows/scheduler.yaml
     secrets: inherit
     with:
@@ -97,5 +97,5 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           PROVISION_MODE: 'regular'
           LOOP: ${{ inputs.provision_mode == 'initial' && 'no' || 'yes' }}
-          RUN_LIGHT: ${{ (github.event_name == 'schedule' && github.event.schedule == '*/30 * * * *') && 'yes' || inputs.run_light }}
-          RUN_HEAVY: ${{ (github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *') && 'yes' || inputs.run_heavy }}
+          RUN_LIGHT: ${{ (github.event_name == 'schedule' && github.event.schedule == '5,20,35,50 * * * *') && 'yes' || inputs.run_light }}
+          RUN_HEAVY: ${{ (github.event_name == 'schedule' && github.event.schedule == '1,16,31,46 * * * *') && 'yes' || inputs.run_heavy }}
