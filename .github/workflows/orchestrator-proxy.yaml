@@ -4,6 +4,12 @@ run-name: ${{ format('Orchestrator Proxy ({0})', github.event_name) }}
 on:
   workflow_dispatch:
     inputs:
+      workflow_name:
+        description: 'Name of the workflow to run'
+        type: choice
+        options:
+          - orchestrator-light.yaml
+          - orchestrator-heavy.yaml
       provision_mode:
         description: 'Provision mode (if set to initial it will use ubuntu-latest image)'
         type: choice
