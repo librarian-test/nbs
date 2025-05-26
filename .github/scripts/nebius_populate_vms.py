@@ -220,12 +220,14 @@ def decide_scaling(
 
     total_removals = max(remove, excess_idle)
     projected = alive - total_removals + to_create
+
     if projected > maximum_amount_of_vms_to_have:
-        raise ValueError(
-            "Projected VMs (%s) exceed the maximum amount of VMs to have (%s).",
+        logger.info(
+            "Projected VMs (%d) exceeds maximum allowed (%d), adjusting to maximum",
             projected,
             maximum_amount_of_vms_to_have,
         )
+        return 0, 0, projected
 
     if projected == 0:
         raise ValueError("Projected VMs (%s) is 0, which is not allowed.", projected)
