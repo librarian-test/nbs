@@ -104,7 +104,7 @@ jobs:
   remove_vms:
     needs: calculate_missing_vms
     name: Remove ${{ inputs.flavor }} VMs
-    if: needs.calculate_missing_vms.outputs.vms_to_remove != '[]'
+    if: needs.calculate_missing_vms.outputs.vms_to_remove != '[]' && always()
     # it is important to use ubuntu-latest here, because it could happen that runner
     # will be scheduled with task of removing itself and since it will be busy
     # in github api, it will not be able to remove itself
@@ -132,7 +132,7 @@ jobs:
   remove_broken:
     needs: calculate_missing_vms
     name: Broken ${{ inputs.flavor }} VMs
-    if: needs.calculate_missing_vms.outputs.broken_vms_to_remove != '[]'
+    if: needs.calculate_missing_vms.outputs.broken_vms_to_remove != '[]' && always()
     runs-on: ${{ inputs.provision_mode == 'initial' && fromJson('["ubuntu-latest"]') || fromJson('["self-hosted", "runner_light"]') }}
     strategy:
       max-parallel: 5
@@ -157,7 +157,7 @@ jobs:
   create_vms:
     needs: calculate_missing_vms
     name: Create ${{ inputs.flavor }} VMs
-    if: needs.calculate_missing_vms.outputs.vms_to_create != '[]'
+    if: needs.calculate_missing_vms.outputs.vms_to_create != '[]' && always()
     runs-on: ${{ inputs.provision_mode == 'initial' && fromJson('["ubuntu-latest"]') || fromJson('["self-hosted", "runner_light"]') }}
     strategy:
       max-parallel: 5
