@@ -103,6 +103,8 @@ jobs:
     runs-on: ${{ fromJson(needs.calculate-runs-on.outputs.runs-on) }}
     timeout-minutes: 420
     needs: calculate-runs-on
+    outputs:
+      test_failed: ${{ steps.test.outputs.test_failed || 'no' }}
     steps:
     - name: Prepare workspace
       shell: bash --noprofile --norc -eo pipefail -x {0}
@@ -223,26 +225,6 @@ jobs:
         use_network_cache: ${{ inputs.use_network_cache }}
         number_of_retries: ${{ inputs.number_of_retries }}
         truncate_enabled: ${{ inputs.truncate_enabled }}
-    - name: Retry running tests if failed not because of failed tests
-      if: ${{ inputs.run_tests && failure() && !cancelled() && steps.test.outputs.failed_tests != 'yes' }}
-      uses: ./.github/actions/test
-      with:
-        test_target: ${{ inputs.test_target }}
-        build_preset: ${{ inputs.build_preset }}
-        test_size: ${{ inputs.test_size }}
-        test_type: ${{ inputs.test_type }}
-        cache_update: ${{ inputs.cache_update_tests }}
-        bazel_remote_uri: ${{ vars.NEBIUS_BAZEL_REMOTE_CACHE_URL }}
-        bazel_remote_username: ${{ secrets.REMOTE_CACHE_USERNAME }}
-        bazel_remote_password: ${{ secrets.REMOTE_CACHE_PASSWORD }}
-        link_threads: ${{ steps.calculate-threads.outputs.link_threads }}
-        test_threads: ${{ steps.calculate-threads.outputs.test_threads }}
-        sync_to_s3: ${{ vars.SYNC_TO_S3 }}
-        upload_ya_dir: ${{ inputs.upload_ya_dir }}
-        clean_ya_dir: ${{ inputs.run_build && 'no' || inputs.clean_ya_dir }}
-        use_network_cache: ${{ inputs.use_network_cache }}
-        number_of_retries: ${{ inputs.number_of_retries }}
-        truncate_enabled: ${{ inputs.truncate_enabled }}
     - id: sleep
       name: Sleep after failed tests
       if: ${{ inputs.sleep_after_tests != '0' && failure() }}
@@ -251,3 +233,28 @@ jobs:
         SLEEP_AFTER_TESTS: ${{ inputs.sleep_after_tests || '7200' }}
       run: |
         sleep "$SLEEP_AFTER_TESTS"
+  test-retry:
+    name: Retry tests
+    runs-on: ${{ fromJson(needs.calculate-runs-on.outputs.runs-on) }}
+    needs: 
+      - calculate-runs-on
+      - build-and-test
+    if: ${{ needs.build-and-test.outputs.test_failed != 'no' && needs.build-and-test.result }}
+    steps:
+      - name: Retry tests
+        uses: ./.github/actions/test_retry
+        with:
+          test_target: ${{ inputs.test_target }}
+          build_preset: ${{ inputs.build_preset }}
+          test_size: ${{ inputs.test_size }}
+          test_type: ${{ inputs.test_type }}
+          bazel_remote_uri: ${{ vars.NEBIUS_BAZEL_REMOTE_CACHE_URL }}
+          bazel_remote_username: ${{ secrets.REMOTE_CACHE_USERNAME }}
+          bazel_remote_password: ${{ secrets.REMOTE_CACHE_PASSWORD }}
+          link_threads: ${{ steps.calculate-threads.outputs.link_threads }}
+          test_threads: ${{ steps.calculate-threads.outputs.test_threads }}
+          sync_to_s3: ${{ vars.SYNC_TO_S3 }}
+          upload_ya_dir: ${{ inputs.upload_ya_dir }}
+          clean_ya_dir: ${{ inputs.clean_ya_dir }}
+          use_network_cache: ${{ inputs.use_network_cache }}
+          number_of_retries: ${{ inputs.number_of_retries }}

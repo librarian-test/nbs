@@ -216,6 +216,9 @@ runs:
         echo "RETRIES=${RETRIES}" | tee -a "$GITHUB_ENV"
         RETRY_FLAG=""
         i=0
+        # setting variable in case that test will be interrupter by OOM killer that
+        # will kill VM with runner
+        echo "failed_tests=yes" >> $GITHUB_OUTPUT
         while [ "$RETRIES" -gt 0 ]; do
           RETRIES=$((RETRIES - 1))
           i=$((i + 1))
@@ -285,6 +288,8 @@ runs:
             break
           fi
         done
+        echo "failed_tests=no" >> $GITHUB_OUTPUT
+
 
     - name: copying system files
       if: ${{ !cancelled() }}
@@ -382,7 +387,6 @@ runs:
         done
 
     - name: check test results
-      id: check_test_results
       shell: bash --noprofile --norc -eo pipefail -x {0}
       env:
         TRUNCATE_ENABLED: ${{ inputs.truncate_enabled }}
@@ -398,10 +402,8 @@ runs:
             (sudo -E -H -u github .github/scripts/tests/fail-checker.py "${JUNIT_REPORT_XML}.${i}"; echo $? > exit_code) |& tee fail-checker-output.log
             set -e
             RC=$(< exit_code)
-            echo "failed_tests=no" >> $GITHUB_OUTPUT
             if [ "$RC" -ne 0 ]; then
               NEED_COPYING=1
-              echo "failed_tests=yes" >> $GITHUB_OUTPUT
               echo "::group::Copy-failed-tests-data"
               sudo -E -H -u github .github/scripts/tests/fail-checker.py "${JUNIT_REPORT_XML}.${i}" --paths-only | while read -r path; do
                 echo $path
