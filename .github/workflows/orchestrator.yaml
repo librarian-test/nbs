@@ -1,5 +1,5 @@
 name: Orchestrator
-run-name: ${{ format('Orchestrator ({0})', github.event_name) }}
+run-name: ${{ format('Orchestrator ({0} {1})', github.event_name, github.event.schedule  ) }}
       
 on:
   schedule:

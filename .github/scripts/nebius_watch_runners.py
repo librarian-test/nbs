@@ -66,6 +66,16 @@ async def main():
     # Map of runner name -> current job
     active_jobs = {}
     workflow_runs = repo.get_workflow_runs(status="in_progress")
+    queued_workflows = repo.get_workflow_runs(
+        status="queued",
+        created=">"
+        + (  # noqa: W503
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=8)
+        ).strftime("%Y-%m-%dT%H:%M:%S+00:00"),
+    )
+    queued_workflows_runs = []
+    for run in queued_workflows:
+        queued_workflows_runs.append(run.id)
 
     for run in workflow_runs:
         for job in get_jobs_raw(token, repo.full_name, run.id):
@@ -157,10 +167,11 @@ async def main():
         "Job",
         "Workflow ID",
         "Job ID",
-        "Real Time",
-        "Raw Time",
+        "Real",
+        "Raw",
     ]
     print(tabulate(table, headers=headers))
+    print(f"Queued workflows: {len(queued_workflows_runs)}")
 
 
 if __name__ == "__main__":

@@ -58,11 +58,12 @@ def filter_instances(instances, runners, args, now_ts):
             getattr(runner, "status", "N/A"),
             getattr(runner, "busy", "N/A"),
         )
-        if runner is None or runner.status == "offline":
+        if runner is None or (runner.status == "offline" and runner.busy is False):
             logger.info(
-                "Instance %s is not associated with a runner or the runner is offline, marking for removal",
+                "Instance %s is not associated with a runner or the runner is offline and not busy, marking for removal",
                 vm_id,
             )
+
             broken_to_remove.append(vm_id)
             continue
 
