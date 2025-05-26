@@ -69,8 +69,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
-          PROVISION_MODE: 'regular'
-          LOOP: ${{ inputs.provision_mode == 'initial' && 'no' || 'yes' }}
-          RUN_LIGHT: ${{ inputs.run_light }}
-          RUN_HEAVY: ${{ inputs.run_heavy }}
           WORKFLOW_NAME: ${{ inputs.workflow_name }}
