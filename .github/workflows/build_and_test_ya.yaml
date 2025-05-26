@@ -204,7 +204,28 @@ jobs:
 
     - name: Run tests
       uses: ./.github/actions/test
+      id: test
       if: inputs.run_tests
+      with:
+        test_target: ${{ inputs.test_target }}
+        build_preset: ${{ inputs.build_preset }}
+        test_size: ${{ inputs.test_size }}
+        test_type: ${{ inputs.test_type }}
+        cache_update: ${{ inputs.cache_update_tests }}
+        bazel_remote_uri: ${{ vars.NEBIUS_BAZEL_REMOTE_CACHE_URL }}
+        bazel_remote_username: ${{ secrets.REMOTE_CACHE_USERNAME }}
+        bazel_remote_password: ${{ secrets.REMOTE_CACHE_PASSWORD }}
+        link_threads: ${{ steps.calculate-threads.outputs.link_threads }}
+        test_threads: ${{ steps.calculate-threads.outputs.test_threads }}
+        sync_to_s3: ${{ vars.SYNC_TO_S3 }}
+        upload_ya_dir: ${{ inputs.upload_ya_dir }}
+        clean_ya_dir: ${{ inputs.run_build && 'no' || inputs.clean_ya_dir }}
+        use_network_cache: ${{ inputs.use_network_cache }}
+        number_of_retries: ${{ inputs.number_of_retries }}
+        truncate_enabled: ${{ inputs.truncate_enabled }}
+    - name: Retry running tests if failed not because of failed tests
+      if: ${{ inputs.run_tests && failure() && !cancelled() && steps.test.outputs.failed_tests != 'yes' }}
+      uses: ./.github/actions/test
       with:
         test_target: ${{ inputs.test_target }}
         build_preset: ${{ inputs.build_preset }}
