@@ -16,7 +16,10 @@ on:
         default: 'regular'
       loop:
         description: 'Loop the action'
-        type: string
+        type: choice
+        options:
+          - "yes"
+          - "no"
         required: false
         default: "no"
 
