@@ -76,6 +76,10 @@ jobs:
       - light
       - heavy
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: '.github'
       - name: Set up gh cli
         uses: ./.github/actions/gh_cli
       - name: Run gh cli to start this workflow with the same arguments
