@@ -84,7 +84,7 @@ runs:
         FLAVOR: ${{ inputs.flavor }}
         VMS_OLDER_THAN: ${{ inputs.vms_ttl }}
         GITHUB_TOKEN: ${{ inputs.token }}
-        LOOP_ARG: ${{ inputs.loop == "yes" && '--loop' || '' }}
+        LOOP_ARG: ${{ inputs.loop == 'yes' && '--loop' || '' }}
     - name: cleanup
       if: always()
       shell: bash
