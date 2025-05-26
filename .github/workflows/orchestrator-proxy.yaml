@@ -65,7 +65,7 @@ jobs:
         if: ${{ always() }}
         shell: bash --noprofile --norc -eo pipefail -x {0} 
         run: |
-          gh workflow run orchestrator.yaml -R "${GITHUB_REPO}" \
+          gh workflow run "${WORKFLOW_NAME}" -R "${GITHUB_REPO}" \
             --field provision_mode="${PROVISION_MODE}" \
             --field loop="${LOOP}" \
             --field run_light="${RUN_LIGHT}" \
@@ -77,3 +77,4 @@ jobs:
           LOOP: ${{ inputs.provision_mode == 'initial' && 'no' || 'yes' }}
           RUN_LIGHT: ${{ inputs.run_light }}
           RUN_HEAVY: ${{ inputs.run_heavy }}
+          WORKFLOW_NAME: ${{ inputs.workflow_name }}
