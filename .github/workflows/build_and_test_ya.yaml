@@ -133,8 +133,6 @@ jobs:
     - name: set up nebius cli
       id: cli
       uses: ./.github/actions/nebius_cli
-      with:
-        sa_json: ${{ secrets.NEW_NEBIUS_SA_JSON_CREDENTIALS }}
     - name: set up gh cli
       id: gh
       uses: ./.github/actions/gh_cli

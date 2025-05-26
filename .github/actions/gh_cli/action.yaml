@@ -1,9 +1,5 @@
 name: Prepare GH cli tool
 description: Install GH cli
-inputs:
-  sa_json:
-    required: true
-    description: ""
 
 runs:
   using: composite

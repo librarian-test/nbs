@@ -123,7 +123,7 @@ jobs:
           vm_allow_downgrade: 'no'
 
   build-and-test:
-    name: Build and test NBS (relwithdebinfo)
+    name: Build and test
     uses: ./.github/workflows/build_and_test_ya.yaml
     needs:
       - provide-runner
