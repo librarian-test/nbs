@@ -72,7 +72,7 @@ jobs:
         uses: ./.github/actions/gh_cli
       - name: Run gh cli to start this workflow with the same arguments
         run: |
-          gh workflow run orchestrator.yaml -R "${{ GITHUB_REPO }}" --field provision_mode="${{ inputs.provision_mode }}" --field loop="${{ inputs.loop }}" --field run_light="${{ inputs.run_light }}" --field run_heavy="${{ inputs.run_heavy }}"
+          gh workflow run orchestrator.yaml -R "${ GITHUB_REPO }" --field provision_mode="${{ inputs.provision_mode }}" --field loop="${{ inputs.loop }}" --field run_light="${{ inputs.run_light }}" --field run_heavy="${{ inputs.run_heavy }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
