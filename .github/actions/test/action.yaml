@@ -563,14 +563,4 @@ runs:
                                     $SUMMARY_OUT_ENV_PATH $SUMMARY_LINKS
         chown -R root:root $GITHUB_WORKSPACE 
         echo "::endgroup::"
-    # remove it after leak will be fixed
-    - name: reboot after tests
-      if: always()
-      shell: bash --noprofile --norc -eo pipefail -x {0}
-      run: |
-        echo "::group::reboot"
-        (
-          sleep 15;
-          sudo reboot;
-        )&
-        echo "::endgroup::"
+
