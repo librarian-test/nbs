@@ -104,7 +104,11 @@ jobs:
     timeout-minutes: 420
     needs: calculate-runs-on
     outputs:
-      test_failed: ${{ steps.test.outputs.test_failed || 'no' }}
+      # outcome failure and test_failed is null -> vm is broken
+      # failure and test_failed is 'no' -> tests failed, but vm is ok
+      # failure and test_failed is 'yes' -> tests failed, vm could be broken
+      test_failed: ${{ steps.test.outputs.test_failed || 'null' }}
+      test_run_outcome: ${{ steps.test.outcome }}
     steps:
     - name: Prepare workspace
       shell: bash --noprofile --norc -eo pipefail -x {0}
@@ -239,8 +243,83 @@ jobs:
     needs: 
       - calculate-runs-on
       - build-and-test
-    if: ${{ needs.build-and-test.outputs.test_failed != 'no' && needs.build-and-test.result }}
+    # we can only rely on fact that test_failed can be null or 
+    if: ${{ failure() && (needs.build-and-test.outputs.test_failed != 'no' || needs.build-and-test.outputs.test_failed == 'null') && needs.build-and-test.outputs.test_run_outcome == 'failure' }}
     steps:
+      - name: Prepare workspace
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+        run: |
+          chown -R root:root $GITHUB_WORKSPACE
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        if: github.event.pull_request.head.sha != ''
+        with:
+          submodules: true
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: ${{ !contains(github.event.pull_request.labels.*.name, 'rebase') && 1 || 0 }}
+      - name: Rebase PR
+        if: ${{ github.event.pull_request.head.sha != '' && contains(github.event.pull_request.labels.*.name, 'rebase') }}
+        shell: bash
+        run: |
+          git config user.email "robot-nbs@nebius.com"
+          git config user.name "Robot NBS"
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git rebase origin/${{ github.event.pull_request.base.ref }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: github.event.pull_request.head.sha == ''
+        with:
+          submodules: true
+          set-safe-directory: '*'
+
+      - name: set up nebius cli
+        id: cli
+        uses: ./.github/actions/nebius_cli
+        with:
+          sa_json: ${{ secrets.NEW_NEBIUS_SA_JSON_CREDENTIALS }}
+      - name: set up gh cli
+        id: gh
+        uses: ./.github/actions/gh_cli
+      - name: get runner info
+        id: get-runner
+        shell: bash --noprofile --norc -eo pipefail -x {0}
+        env:
+          RUNNER_NAME: ${{ runner.name }}
+        run: |
+          nebius compute instance get --id "${RUNNER_NAME}" --format json > instance.json
+          LABEL=$(jq -r '.metadata.labels."runner-label"' instance.json)
+          RUNNER_FLAVOR=$(jq -r '.metadata.labels."runner-flavor"' instance.json)
+          EXTERNAL_IPV4=$(jq -r '.status.network_interfaces[0].public_ip_address.address' instance.json | sed -e 's/\/32//g')
+          LOCAL_IPV4=$(jq -r '.status.network_interfaces[0].ip_address.address' instance.json | sed -e 's/\/32//g')
+          VM_PRESET=$(jq -r '.spec.resources.preset' instance.json)
+          {
+            echo "LABEL=${LABEL}"
+            echo "RUNNER_FLAVOR=${RUNNER_FLAVOR}"
+            echo "INSTANCE_ID=${INSTANCE_ID}"
+            echo "RUNNER_IPV4=${EXTERNAL_IPV4}"
+            echo "RUNNER_LOCAL_IPV4=${LOCAL_IPV4}"
+            echo "VM_PRESET=${VM_PRESET}"
+          } | tee -a "$GITHUB_OUTPUT"
+
+      - name: Calculate threads
+        id: calculate-threads
+        if: always()
+        uses: ./.github/actions/nebius_threads_calculator
+        with:
+          vm_preset: ${{ steps.get-runner.outputs.VM_PRESET }}
+          tests_size: ${{ inputs.test_size }}
+
+      - name: Prepare s3cmd
+        uses: ./.github/actions/s3cmd
+        with:
+          s3_bucket: ${{ vars.AWS_BUCKET }}
+          s3_endpoint: ${{ vars.NEBIUS_AWS_ENDPOINT }}
+          s3_website_suffix: ${{ vars.NEBIUS_AWS_WEBSITE_SUFFIX }}
+          s3_key_id: ${{ secrets.NEBIUS_AWS_ACCESS_KEY_ID }}
+          s3_key_secret: ${{ secrets.NEBIUS_AWS_SECRET_ACCESS_KEY }}
+          folder_prefix: nebius-
+          build_preset: ${{ inputs.build_preset }}
+          install: false
       - name: Retry tests
         uses: ./.github/actions/test_retry
         with:
