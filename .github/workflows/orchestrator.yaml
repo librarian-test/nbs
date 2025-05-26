@@ -79,18 +79,14 @@ jobs:
       - name: Set up gh cli
         uses: ./.github/actions/gh_cli
       - name: Run gh cli to start this workflow with the same arguments
+        if: ${{ always() }}
         shell: bash --noprofile --norc -eo pipefail -x {0} 
         run: |
-          (
-            # this is workaround for launching workflow that have concurrency group with cancel-in-progress: true
-            # it will wait for 15 seconds in background to start new workflow to allow for current workflow to finish
-            sleep 15;
-            gh workflow run orchestrator.yaml -R "${GITHUB_REPO}" \
-              --field provision_mode="${PROVISION_MODE}" \
-              --field loop="${LOOP}" \
-              --field run_light="${RUN_LIGHT}" \
-              --field run_heavy="${RUN_HEAVY}" \
-          )&
+          gh workflow run orchestrator.yaml -R "${GITHUB_REPO}" \
+            --field provision_mode="${PROVISION_MODE}" \
+            --field loop="${LOOP}" \
+            --field run_light="${RUN_LIGHT}" \
+            --field run_heavy="${RUN_HEAVY}" \  
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}
