@@ -4,6 +4,7 @@ run-name: ${{ format('Orchestrator (heavy)')  }}
 on:
   schedule:
     - cron: '1,16,31,46 * * * *'
+  workflow_dispatch:
 
 concurrency:
   group: orchestrator-heavy
