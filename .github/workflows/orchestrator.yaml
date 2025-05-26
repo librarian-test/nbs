@@ -2,6 +2,9 @@ name: Orchestrator
 run-name: ${{ format('Orchestrator ({0} {1} {2})', github.event_name, github.event.schedule == '*/30 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none'), github.event.schedule == '*/15 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none'))  }}
       
 on:
+  schedule:
+    - cron: '*/30 * * * *' # Every 30 minutes for light VMs
+    - cron: '*/15 * * * *' # Every 15 minutes for heavy VMs  
   workflow_dispatch:
     inputs:
       provision_mode:
@@ -38,7 +41,7 @@ on:
         default: "yes"
 
 concurrency:
-  group: orchestrator-${{ github.event.schedule == '*/30 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none')}}- ${{ github.event.schedule == '*/15 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none') }}
+  group: orchestrator-${{ github.event.schedule == '*/30 * * * *' && 'light' || (inputs.run_light == 'yes' && 'light' || 'none')}}-${{ github.event.schedule == '*/15 * * * *' && 'heavy' || (inputs.run_heavy == 'yes' && 'heavy' || 'none') }}
   cancel-in-progress: true
 
 jobs:
