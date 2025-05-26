@@ -16,6 +16,10 @@ inputs:
   extra_vms_if_needed:
     required: true
     description: "extra vms if needed"
+  loop:
+    required: false
+    description: "loop the action"
+    default: "no"
   flavor:
     required: true
     description: "required flavor"
@@ -61,6 +65,7 @@ runs:
         export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/.github
         python3 -m scripts.nebius_populate_vms \
           --service-account-key "${SERVICE_ACCOUNT_KEY}" \
+          ${LOOP_ARG} \
           --github-repo-owner "${OWNER}" \
           --github-repo "${REPO}" \
           --parent-id "${PARENT_ID}" \
@@ -79,6 +84,7 @@ runs:
         FLAVOR: ${{ inputs.flavor }}
         VMS_OLDER_THAN: ${{ inputs.vms_ttl }}
         GITHUB_TOKEN: ${{ inputs.token }}
+        LOOP_ARG: ${{ inputs.loop == "yes" && '--loop' || '' }}
     - name: cleanup
       if: always()
       shell: bash

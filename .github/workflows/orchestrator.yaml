@@ -14,6 +14,11 @@ on:
           - regular
         required: true
         default: 'regular'
+      loop:
+        description: 'Loop the action'
+        type: string
+        required: false
+        default: "no"
 
 jobs:
   light:
@@ -25,6 +30,7 @@ jobs:
       vms_ttl: "86400"
       flavor: light
       provision_mode: ${{ inputs.provision_mode || 'regular' }}
+      loop: ${{ inputs.provision_mode == 'initial' && 'no' || (inputs.loop || 'no') }}
   heavy:
     name: Populate heavy VMs
     uses: ./.github/workflows/scheduler.yaml
@@ -34,3 +40,4 @@ jobs:
       vms_ttl: "86400"
       flavor: heavy
       provision_mode: ${{ inputs.provision_mode || 'regular' }}
+      loop: ${{ inputs.provision_mode == 'initial' && 'no' || (inputs.loop == 'yes' && 'yes' || 'no') }}

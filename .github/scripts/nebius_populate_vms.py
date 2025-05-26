@@ -3,6 +3,7 @@ import json
 import os
 import asyncio
 import argparse
+import datetime
 from github import Github
 from grpc import StatusCode
 from nebius.sdk import SDK
@@ -231,7 +232,8 @@ def decide_scaling(
     return to_create, excess_idle, projected
 
 
-async def run(github: Github, sdk: SDK, args: argparse.Namespace):
+# return True if we have something to create or remove
+async def run(github: Github, sdk: SDK, args: argparse.Namespace) -> bool:
     now_ts = int(time.time())
     repo = github.get_repo(f"{args.github_repo_owner}/{args.github_repo}")
     instance_client = InstanceServiceClient(sdk)
@@ -251,7 +253,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         github_output(logger, "VMS_TO_REMOVE", "[]")
         github_output(logger, "VMS_TO_CREATE", "[]")
         github_output(logger, "DATE", str(now_ts))
-        return
+        return False
 
     logger.info("Fetched %d instances", len(instances))
     runners = list(repo.get_self_hosted_runners())
@@ -267,7 +269,14 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
         len(busy_vm_ids),
     )
     # calculating number of workflows that are queued and are waiting for runner with this flavor
-    queued_workflows = repo.get_workflow_runs(status="queued")
+    # checking workflows created in the last 8 hours, format >YYYY-MM-DDTHH:MM:SS+00:00
+    queued_workflows = repo.get_workflow_runs(
+        status="queued",
+        created=">"
+        + (  # noqa: W503
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=8)
+        ).strftime("%Y-%m-%dT%H:%M:%S+00:00"),
+    )
     queued_workflows_count = 0
     for workflow in queued_workflows:
         # search through workflow jobs to get labels for jobs with status queued
@@ -339,7 +348,15 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
     github_output(logger, "VMS_TO_REMOVE", json.dumps(to_remove))
     github_output(logger, "VMS_TO_CREATE", json.dumps(vms_to_create))
     github_output(logger, "BROKEN_VMS_TO_REMOVE", json.dumps(broken_to_remove))
-
+    result = False
+    if to_create > 0 or len(to_remove) > 0 or len(broken_to_remove) > 0:
+        result = True
+        logger.info(
+            "We have something to create or remove: %d to create, %d to remove, %d broken to remove",
+            to_create,
+            len(to_remove),
+            len(broken_to_remove),
+        )
     # clean up github runners that doesn't have a matching VM and are offline
     # also remove runners that will be removed, so they won't be used
     logger.info("Cleaning up GitHub runners that don't have a matching VM")
@@ -373,7 +390,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
                     logger.error(
                         "Failed to remove runner %s (id: %s)", runner.name, runner.id
                     )
-                    return
+                    return result
                 logger.info("Removed runner %s (id: %s)", runner.name, runner.id)
 
         if runner.name in to_remove:
@@ -382,8 +399,9 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace):
                 logger.error(
                     "Failed to remove runner %s (id: %s)", runner.name, runner.id
                 )
-                return
+                return result
             logger.info("Removed runner %s (id: %s)", runner.name, runner.id)
+    return result
 
 
 async def main():
@@ -440,6 +458,23 @@ async def main():
         default=1,
         help="Number of additional VMs to create when most are busy",
     )
+    parser.add_argument(
+        "--loop",
+        action="store_true",
+        help="Run the script in a loop, checking every --loop-interval seconds "
+        + "until --loop-timeout is reached or we have something to create/remove",  # noqa: W503
+    )
+    parser.add_argument(
+        "--loop-interval",
+        type=int,
+        default=15,
+    )
+    parser.add_argument(
+        "--loop-timeout",
+        type=int,
+        default=3600,
+        help="Timeout for the loop in seconds, after which it will stop",
+    )
     args = parser.parse_args()
     logger.info("Parsed arguments: %s", args)
 
@@ -450,8 +485,30 @@ async def main():
     sdk = SDK(credentials_file_name=args.service_account_key)
     github = Github(github_token)
 
-    async with sdk:
-        await run(github, sdk, args)
+    if args.loop:
+        start_time = time.time()
+        while True:
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= args.loop_timeout:
+                logger.info("Loop timeout reached, exiting")
+                break
+
+            try:
+                result = await run(github, sdk, args)
+            except Exception as e:
+                logger.error("Error during run: %s", e)
+
+            if result:
+                logger.info("Something to create or remove, exiting loop")
+                break
+
+            logger.info(
+                "Sleeping for %d seconds before next iteration", args.loop_interval
+            )
+            await asyncio.sleep(args.loop_interval)
+    else:
+        async with sdk:
+            await run(github, sdk, args)
 
 
 if __name__ == "__main__":

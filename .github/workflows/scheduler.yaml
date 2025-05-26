@@ -29,6 +29,11 @@ on:
           - regular
         required: true
         default: 'regular'
+      loop:
+        description: 'Loop the action'
+        type: string
+        required: false
+        default: "no"
 
   workflow_call:
     inputs:
@@ -52,6 +57,11 @@ on:
         type: string
         required: true
         default: 'regular'
+      loop:
+        description: 'Loop the action'
+        type: string
+        required: false
+        default: "no"
 
 concurrency:
   group: 'populate-vms-${{ inputs.flavor }}'
@@ -90,6 +100,7 @@ jobs:
           maximum_amount_of_vms_to_have: ${{ github.repository == 'ydb-platform/nbs' && (vars.MAXIMUM_AMOUNT_OF_VMS_TO_HAVE || '10') || '5' }}
           extra_vms_if_needed: ${{ vars.EXTRA_VMS_IF_NEEDED || '1' }}
           service_account_key: ${{ secrets.NEW_NEBIUS_SA_JSON_CREDENTIALS }}
+          loop:  ${{ inputs.provision_mode == 'initial' && 'no' || inputs.loop }}
   remove_vms:
     needs: calculate_missing_vms
     name: Remove ${{ inputs.flavor }} VMs
