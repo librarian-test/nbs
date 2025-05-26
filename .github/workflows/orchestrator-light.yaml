@@ -1,4 +1,4 @@
-name: Orchestrator
+name: Orchestrator (light)
 run-name: ${{ format('Orchestrator (light)')  }}
       
 on:
