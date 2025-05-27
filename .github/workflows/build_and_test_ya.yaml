@@ -248,8 +248,8 @@ jobs:
       - name: Debug info
         shell: bash --noprofile --norc -eo pipefail -x {0}
         run: |
-          echo "Test run outcome: ${needs.build-and-test.outputs.test_run_outcome}"
-          echo "Test failed: ${needs.build-and-test.outputs.test_failed}"
+          echo "Test run outcome: ${{ needs.build-and-test.outputs.test_run_outcome }}"
+          echo "Test failed: ${{ needs.build-and-test.outputs.test_failed }}"
     
   test-retry:
     name: Retry tests
