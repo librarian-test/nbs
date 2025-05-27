@@ -260,6 +260,8 @@ jobs:
           echo "Test run outcome is cancelled: ${{ needs.build-and-test.outputs.test_run_outcome == 'cancelled' }}"
           echo "Test run outcome is empty: ${{ needs.build-and-test.outputs.test_run_outcome == '' }}"
           echo "Test failed is empty: ${{ needs.build-and-test.outputs.test_failed == '' }}"
+          echo "Condition: ${{ needs.build-and-test.outputs.test_failed == null && needs.build-and-test.outputs.test_run_outcome == null }}"
+          echo "Condition: ${{ needs.build-and-test.outputs.test_failed == '' && needs.build-and-test.outputs.test_run_outcome == '' }}"
           
         env:
           test_run_outcome: ${{ needs.build-and-test.outputs.test_run_outcome }}
