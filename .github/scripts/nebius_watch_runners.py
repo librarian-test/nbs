@@ -12,12 +12,17 @@ from .helpers import (
     date_to_hms,
 )
 import datetime
+from typing import List
 
 from nebius.sdk import SDK
 from nebius.aio.service_error import RequestError
 from nebius.api.nebius.compute.v1 import (
     InstanceServiceClient,
     GetInstanceRequest,
+)
+from nebius.api.nebius.common.v1 import (
+    Operation,
+    ListOperationsRequest,
 )
 
 logger = setup_logger()
@@ -42,6 +47,12 @@ def parse_args():
     parser.add_argument(
         "--token", help="GitHub access token (or set GITHUB_TOKEN env variable)"
     )
+    parser.add_argument(
+        "--parent-id",
+        required=True,
+        default="project-e00p3n19h92mcw7vke",
+        help="Parent ID where the VM will be created",
+    )
     return parser.parse_args()
 
 
@@ -56,6 +67,7 @@ async def main():
 
     sdk = SDK(credentials_file_name=args.service_account_key)
     service = InstanceServiceClient(sdk)
+    operation_service = service.operation_service()
 
     g = Github(token)
     repo = g.get_repo(f"{args.owner}/{args.repo}")
@@ -134,6 +146,25 @@ async def main():
             ip = response.status.network_interfaces[0].public_ip_address.address
             ip = ip.split("/")[0]
 
+        # trying to calculate crashes by watching operation list for event "Recover instance"
+        crash_count = 0
+        operations: List[Operation] = []
+        request = ListOperationsRequest(resource_id=name)
+        try:
+            while True:
+                response = await operation_service.list(request)
+                operations.extend(response.operations)
+                if not response.next_page_token:
+                    break
+                request.page_token = response.next_page_token
+
+        except RequestError as e:
+            logger.error(f"Error fetching operations for instance {name}: %s", e)
+
+        for operation in operations:
+            if operation.description == "Recover Instance":
+                crash_count += 1
+
         table.append(
             [
                 runner_id,
@@ -149,6 +180,7 @@ async def main():
                 job_id,
                 date_to_hms(took_real),
                 date_to_hms(took_raw),
+                crash_count,
             ]
         )
     # sort by type and then by id
@@ -169,6 +201,7 @@ async def main():
         "Job ID",
         "Real",
         "Raw",
+        "Crashes",
     ]
     print(tabulate(table, headers=headers))
     print(f"Queued workflows: {len(queued_workflows_runs)}")

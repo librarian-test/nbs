@@ -250,6 +250,30 @@ jobs:
         run: |
           echo "Test run outcome: ${{ needs.build-and-test.outputs.test_run_outcome }}"
           echo "Test failed: ${{ needs.build-and-test.outputs.test_failed }}"
+          echo "Test run outcome is null: ${{ needs.build-and-test.outputs.test_run_outcome == null }}"
+          echo "Test failed is null: ${{ needs.build-and-test.outputs.test_failed == null }}"
+          echo "Test run outcome is failure: ${{ needs.build-and-test.outputs.test_run_outcome == 'failure' }}"
+          echo "Test failed is no: ${{ needs.build-and-test.outputs.test_failed == 'no' }}"
+          echo "Test failed is yes: ${{ needs.build-and-test.outputs.test_failed == 'yes' }}"
+          echo "Test run outcome is success: ${{ needs.build-and-test.outputs.test_run_outcome == 'success' }}"
+          echo "Test run outcome is skipped: ${{ needs.build-and-test.outputs.test_run_outcome == 'skipped' }}"
+          echo "Test run outcome is cancelled: ${{ needs.build-and-test.outputs.test_run_outcome == 'cancelled' }}"
+          echo "Test run outcome is empty: ${{ needs.build-and-test.outputs.test_run_outcome == '' }}"
+          echo "Test failed is empty: ${{ needs.build-and-test.outputs.test_failed == '' }}"
+          
+        env:
+          test_run_outcome: ${{ needs.build-and-test.outputs.test_run_outcome }}
+          test_failed: ${{ needs.build-and-test.outputs.test_failed }}
+          test_run_outcome_is_null: ${{ needs.build-and-test.outputs.test_run_outcome == null }}
+          test_failed_is_null: ${{ needs.build-and-test.outputs.test_failed == null }}
+          test_run_outcome_is_failure: ${{ needs.build-and-test.outputs.test_run_outcome == 'failure' }}
+          test_failed_is_no: ${{ needs.build-and-test.outputs.test_failed == 'no' }}
+          test_failed_is_yes: ${{ needs.build-and-test.outputs.test_failed == 'yes' }}
+          test_run_outcome_is_success: ${{ needs.build-and-test.outputs.test_run_outcome == 'success' }}
+          test_run_outcome_is_skipped: ${{ needs.build-and-test.outputs.test_run_outcome == 'skipped' }}
+          test_run_outcome_is_cancelled: ${{ needs.build-and-test.outputs.test_run_outcome == 'cancelled' }}
+          test_run_outcome_is_empty: ${{ needs.build-and-test.outputs.test_run_outcome == '' }}
+          test_failed_is_empty: ${{ needs.build-and-test.outputs.test_failed == '' }}
     
   test-retry:
     name: Retry tests
@@ -258,7 +282,7 @@ jobs:
       - calculate-runs-on
       - build-and-test
     # we can only rely on fact that test_failed can be null or 
-    if: ${{ failure() && (needs.build-and-test.outputs.test_failed != 'no' || needs.build-and-test.outputs.test_failed == 'null') && needs.build-and-test.outputs.test_run_outcome == 'failure' }}
+    if: ${{ failure() && (needs.build-and-test.outputs.test_failed == null  && needs.build-and-test.outputs.test_run_outcome == null) }}
     steps:
       - name: Prepare workspace
         shell: bash --noprofile --norc -eo pipefail -x {0}
