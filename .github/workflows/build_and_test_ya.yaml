@@ -360,8 +360,9 @@ jobs:
           folder_prefix: nebius-
           build_preset: ${{ inputs.build_preset }}
           install: false
-      - name: Retry tests
-        uses: ./.github/actions/test_retry
+      - name: Run tests
+        uses: ./.github/actions/test
+        id: test
         with:
           test_target: ${{ inputs.test_target }}
           build_preset: ${{ inputs.build_preset }}
