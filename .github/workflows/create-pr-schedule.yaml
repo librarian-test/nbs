@@ -24,6 +24,8 @@ jobs:
           # Component selection including "none"
           options=(filestore blockstore disk_manager tasks none)
           component=${options[$RANDOM % ${#options[@]}]}
+          large_tests_options=("yes" "no" "no" "no" "no" "no" "no" "no" "no" "no" "no")
+          large_tests=${large_tests_options[$RANDOM % ${#large_tests_options[@]}]}
 
           # Sanitizer only if filestore or blockstore
           if [[ "$component" == "filestore" || "$component" == "blockstore" ]]; then
@@ -36,6 +38,7 @@ jobs:
             echo "branch=$branch"
             echo "component=$component"
             echo "sanitizer=$sanitizer"
+            echo "large_tests=$large_tests"
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout repo 
@@ -78,6 +81,7 @@ jobs:
           BRANCH=${{ steps.rand.outputs.branch }}
           COMPONENT=${{ steps.rand.outputs.component }}
           SANITIZER=${{ steps.rand.outputs.sanitizer }}
+          LARGE_TESTS=${{ steps.rand.outputs.large_tests }}
           # if any label is not none add it comma separated with arguments --label
           LABELS=()
           if [[ "$COMPONENT" != "none" ]]; then
@@ -91,6 +95,9 @@ jobs:
             LABELS_ARG="--label $LABELS_STR"
           else
             LABELS_ARG=""
+          fi
+          if [[ "$LARGE_TESTS" == "yes" ]]; then
+            LABELS_ARG="$LABELS_ARG --label large-tests"
           fi
           # Create the PR with the specified labels
           PR_URL=$(gh pr create \
