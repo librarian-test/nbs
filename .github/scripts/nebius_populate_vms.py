@@ -6,11 +6,16 @@ import argparse
 import datetime
 from github import Github
 from grpc import StatusCode
+from typing import List
 from nebius.sdk import SDK
 from nebius.api.nebius.compute.v1 import (
     InstanceServiceClient,
     ListInstancesRequest,
     GetInstanceRequest,
+)
+from nebius.api.nebius.common.v1 import (
+    Operation,
+    ListOperationsRequest,
 )
 from nebius.aio.service_error import RequestError
 from .helpers import setup_logger, github_output
@@ -18,7 +23,7 @@ from .helpers import setup_logger, github_output
 logger = setup_logger()
 
 
-def filter_instances(instances, runners, args, now_ts):
+async def filter_instances(instances, runners, args, now_ts, operation_service):
     vms_to_remove = []
     broken_to_remove = []
     matched_vm_ids = []
@@ -26,6 +31,7 @@ def filter_instances(instances, runners, args, now_ts):
     busy_vm_ids = []
 
     for instance in instances:
+        vm_id = instance.metadata.id
         labels = instance.metadata.labels
         condition = (
             labels.get("repo", "") != args.github_repo
@@ -35,19 +41,36 @@ def filter_instances(instances, runners, args, now_ts):
         )
         logger.info(
             "Instance %s labels: %s, state: %s",
-            instance.metadata.id,
+            vm_id,
             ", ".join([f"{k}: {v}" for k, v in labels.items()]),
             instance.status.state.name,
         )
         if condition:
             logger.info(
                 "Instance %s does not match criteria: %s",
-                instance.metadata.id,
+                vm_id,
                 condition,
             )
             continue
 
-        vm_id = instance.metadata.id
+        # trying to calculate crashes by watching operation list for event "Recover instance"
+        crash_count = 0
+        operations: List[Operation] = []
+        request = ListOperationsRequest(resource_id=vm_id)
+        try:
+            while True:
+                response = await operation_service.list(request)
+                operations.extend(response.operations)
+                if not response.next_page_token:
+                    break
+                request.page_token = response.next_page_token
+
+        except RequestError as e:
+            logger.error(f"Error fetching operations for instance {vm_id}: %s", e)
+
+        for operation in operations:
+            if operation.description == "Recover Instance":
+                crash_count += 1
 
         runner = next((r for r in runners if r.name == vm_id), None)
         logger.info(
@@ -78,6 +101,13 @@ def filter_instances(instances, runners, args, now_ts):
                     vm_id,
                     age,
                     args.vms_older_than,
+                )
+                vms_to_remove.append(vm_id)
+            elif crash_count > 0:
+                logger.info(
+                    "Instance %s is idle, has %d crashes, marking for removal",
+                    vm_id,
+                    crash_count,
                 )
                 vms_to_remove.append(vm_id)
         elif runner and runner.busy:
@@ -240,6 +270,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace) -> bool:
     now_ts = int(time.time())
     repo = github.get_repo(f"{args.github_repo_owner}/{args.github_repo}")
     instance_client = InstanceServiceClient(sdk)
+    operation_client = instance_client.operation_service()
     instances = []
     try:
         logger.info("Listing instances from Nebius (with pagination)...")
@@ -262,7 +293,7 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace) -> bool:
     runners = list(repo.get_self_hosted_runners())
 
     matched_vm_ids, idle_vm_ids, busy_vm_ids, vms_to_remove, broken_to_remove = (
-        filter_instances(instances, runners, args, now_ts)
+        filter_instances(instances, runners, args, now_ts, operation_client)
     )
 
     logger.info(
