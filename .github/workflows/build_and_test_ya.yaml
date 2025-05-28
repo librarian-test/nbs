@@ -239,7 +239,7 @@ jobs:
         sleep "$SLEEP_AFTER_TESTS"
   debug:
     name: Debug
-    runs-on: ${{ fromJson(needs.calculate-runs-on.outputs.runs-on) }}
+    runs-on: [self-hosted, "self-hosted", "runner_light"]
     needs: 
       - calculate-runs-on
       - build-and-test

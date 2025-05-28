@@ -32,7 +32,7 @@ def parse_datetime(value, now=None):
         )
 
 
-def output_results(all_jobs: List[Job], summary):
+def output_results(all_jobs: List[Job], summary, threshold: int):
     print("=== Job Wait Times ===")
     print(
         tabulate(
@@ -47,6 +47,7 @@ def output_results(all_jobs: List[Job], summary):
                     (job.started_at - job.created_at).total_seconds(),
                 ]
                 for job in all_jobs
+                if (job.started_at - job.created_at).total_seconds() >= threshold
             ],
             headers=[
                 "Id",
@@ -98,7 +99,7 @@ def output_results(all_jobs: List[Job], summary):
     )
 
 
-def main(start, end):
+def main(start, end, threshold):
     logger.info(f"Fetching workflow runs from {start} to {end}")
     all_jobs = []
     summary = defaultdict(lambda: {"total_wait": 0.0, "count": 0, "waits": []})
@@ -158,7 +159,7 @@ def main(start, end):
                 summary[job.runner_type]["count"] += 1
                 summary[job.runner_type]["waits"].append(wait_sec)
 
-    output_results(all_jobs, summary)
+    output_results(all_jobs, summary, threshold)
 
 
 if __name__ == "__main__":
@@ -194,6 +195,12 @@ if __name__ == "__main__":
         type=str,
         help="GitHub token for authentication",
     )
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=120,
+        help="Minimum wait time in seconds to include in results",
+    )
     args = parser.parse_args()
 
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -209,4 +216,4 @@ if __name__ == "__main__":
     g = Github(GITHUB_TOKEN)
     repo = g.get_repo(f"{args.owner}/{args.repo}")
 
-    main(start, end)
+    main(start, end, args.threshold)
