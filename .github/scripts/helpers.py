@@ -86,6 +86,8 @@ def compact_job_name(job_name: str) -> str:
         return job_name.replace("Build and test", "").strip()
     if "(" in job_name:
         return job_name.split("(")[0].strip()
+    if ".yaml" in job_name or ".yml" in job_name:
+        return job_name.replace(".yaml", "").replace(".yml", "").strip()
     return job_name
 
 

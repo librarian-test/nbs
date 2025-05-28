@@ -49,7 +49,7 @@ concurrency:
 jobs:
   
   restart:
-    name: Run orchestrator.yaml workflow
+    name: Run ${{ inputs.workflow_name }}
     if: ${{ !cancelled() }}
     runs-on: ${{ inputs.provision_mode == 'initial' && fromJson('["ubuntu-latest"]') || fromJson('["self-hosted", "runner_light"]') }}
     steps:
