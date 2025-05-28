@@ -75,7 +75,7 @@ jobs:
     secrets: inherit
     with:
       max_vms_to_create: 5
-      vms_ttl: "86400"
+      vms_ttl: "21600"
       flavor: light
       provision_mode: ${{ inputs.provision_mode || 'regular' }}
       loop: ${{ inputs.provision_mode == 'initial' && 'no' || (inputs.loop || 'no') }}
