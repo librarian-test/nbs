@@ -1,5 +1,5 @@
 name: Orchestrator Proxy
-run-name: ${{ format('Orchestrator Proxy ({0})', github.event_name) }}
+run-name: ${{ format('Orchestrator Proxy ({0} {1})', github.event_name, inputs.run_heavy == 'yes' && 'heavy' || 'light') }}
       
 on:
   workflow_dispatch:

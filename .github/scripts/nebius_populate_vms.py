@@ -527,6 +527,7 @@ async def main():
                 logger.info("Loop timeout reached, exiting")
                 break
 
+            result = False
             try:
                 result = await run(github, sdk, args)
             except Exception as e:
