@@ -292,9 +292,13 @@ async def run(github: Github, sdk: SDK, args: argparse.Namespace) -> bool:
     logger.info("Fetched %d instances", len(instances))
     runners = list(repo.get_self_hosted_runners())
 
-    matched_vm_ids, idle_vm_ids, busy_vm_ids, vms_to_remove, broken_to_remove = (
-        filter_instances(instances, runners, args, now_ts, operation_client)
-    )
+    (
+        matched_vm_ids,
+        idle_vm_ids,
+        busy_vm_ids,
+        vms_to_remove,
+        broken_to_remove,
+    ) = await filter_instances(instances, runners, args, now_ts, operation_client)
 
     logger.info(
         "Total matched VMs: %d (Idle: %d, Busy: %d)",
