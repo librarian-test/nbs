@@ -86,7 +86,7 @@ jobs:
     uses: ./.github/workflows/scheduler.yaml
     secrets: inherit
     with:
-      max_vms_to_create: 1
+      max_vms_to_create: 5
       vms_ttl: "21600"
       flavor: heavy
       provision_mode: ${{ inputs.provision_mode || 'regular' }}
