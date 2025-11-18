@@ -124,10 +124,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     outputs:
-      label: ${{ steps.start-runner.outputs.label }}
-      instance-id: ${{ steps.start-runner.outputs.instance-id }}
-      runner_ipv4: ${{ steps.start-runner.outputs.external-ipv4 }}
-      runner_local_ipv4: ${{ steps.start-runner.outputs.local-ipv4 }}
+      label: ${{ steps.start-runner.outputs.LABEL }}
+      instance-id: ${{ steps.start-runner.outputs.INSTANCE_ID }}
+      runner_ipv4: ${{ steps.start-runner.outputs.RUNNER_IPV4 }}
+      runner_local_ipv4: ${{ steps.start-runner.outputs.RUNNER_LOCAL_IPV4 }}
       build_threads: ${{ steps.calculate-threads.outputs.build_threads || '60' }}
       test_threads: ${{ steps.calculate-threads.outputs.test_threads || '32' }}
       link_threads: ${{ steps.calculate-threads.outputs.link_threads || '24' }}
