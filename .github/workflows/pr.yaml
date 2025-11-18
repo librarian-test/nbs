@@ -282,13 +282,13 @@ jobs:
           BUILD_AND_TEST_CONDITION_4: ${{ !contains(github.event.pull_request.labels.*.name, 'pooled') }}
           BUILD_AND_TEST_CONDITION_5: ${{ !contains(github.event.pull_request.labels.*.name, 'hybrid') }}
           BUILD_AND_TEST_CONDITION_6: ${{ contains(github.event.pull_request.labels.*.name, 'on_demand') }}
-          BUILD_AND_TEST_CONDITION_7: ${{ (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand')) }}
-          BUILD_AND_TEST_CONDITION: ${{ needs.check-running-allowed.outputs.result == 'true' && (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand')) }}
+          BUILD_AND_TEST_CONDITION_7: ${{ ((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand')) }}
+          BUILD_AND_TEST_CONDITION: ${{ needs.check-running-allowed.outputs.result == 'true' && (((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand'))) }}
   build_and_test:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-    if: needs.check-running-allowed.outputs.result == 'true' && (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand'))
+    if: needs.check-running-allowed.outputs.result == 'true' && (((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand')))
     name: Build and test
     uses: ./.github/workflows/on_demand_build_and_test.yaml
     with:
