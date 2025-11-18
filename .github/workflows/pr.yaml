@@ -306,7 +306,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'asan') && (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand'))
+    if: needs.check-running-allowed.outputs.result == 'true' && (((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand')))
     name: Build and test (asan)
     uses: ./.github/workflows/on_demand_build_and_test.yaml
     with:
@@ -325,7 +325,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'tsan') && (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand'))
+    if: needs.check-running-allowed.outputs.result == 'true' && (((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand')))
     name: Build and test (tsan)
     uses: ./.github/workflows/on_demand_build_and_test.yaml
     with:
@@ -344,7 +344,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'msan') && (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand'))
+    if: needs.check-running-allowed.outputs.result == 'true' && (((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand')))
     name: Build and test (msan)
     uses: ./.github/workflows/on_demand_build_and_test.yaml
     with:
@@ -363,7 +363,7 @@ jobs:
     needs:
       - check-running-allowed
       - create-build-and-test-target-var
-    if: needs.check-running-allowed.outputs.result == 'true' && contains(github.event.pull_request.labels.*.name, 'ubsan') && (vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '' || !contains(github.event.pull_request.labels.*.name, 'pooled') || !contains(github.event.pull_request.labels.*.name, 'hybrid') || contains(github.event.pull_request.labels.*.name, 'on_demand'))
+    if: needs.check-running-allowed.outputs.result == 'true' && (((vars.NEBIUS_SCHEDULING_TYPE == 'regular' || vars.NEBIUS_SCHEDULING_TYPE == '') && !contains(github.event.pull_request.labels.*.name, 'pooled') && !contains(github.event.pull_request.labels.*.name, 'hybrid')) || ((vars.NEBIUS_SCHEDULING_TYPE != 'regular' && vars.NEBIUS_SCHEDULING_TYPE != '') && contains(github.event.pull_request.labels.*.name, 'on_demand')))
     name: Build and test (ubsan)
     uses: ./.github/workflows/on_demand_build_and_test.yaml
     with:
